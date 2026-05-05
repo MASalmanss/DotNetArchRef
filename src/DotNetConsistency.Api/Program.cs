@@ -1,23 +1,11 @@
-using DotNetConsistency.Api.Application.Interfaces;
-using DotNetConsistency.Api.Application.Services;
-using DotNetConsistency.Api.Infrastructure.Data;
+using DotNetConsistency.Api.Application;
+using DotNetConsistency.Api.Infrastructure;
 using DotNetConsistency.Api.Infrastructure.ExceptionHandlers;
-using DotNetConsistency.Api.Infrastructure.Repositories;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
-builder.Services.AddScoped<IBookRepository, BookRepository>();
-builder.Services.AddScoped<IAuthorService, AuthorService>();
-builder.Services.AddScoped<IBookService, BookService>();
-
-builder.Services.AddSingleton<IExceptionHandler, NotFoundExceptionHandler>();
-builder.Services.AddSingleton<IExceptionHandler, ConflictExceptionHandler>();
-builder.Services.AddSingleton<IExceptionHandler, DefaultExceptionHandler>();
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
