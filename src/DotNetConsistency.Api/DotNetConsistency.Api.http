@@ -1,0 +1,6 @@
+@DotNetConsistency.Api_HostAddress = http://localhost:5133
+
+GET {{DotNetConsistency.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
