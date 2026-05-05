@@ -1,6 +1,6 @@
-using DotNetConsistency.Api.Domain.Common;
+using DotNetConsistency.Domain.Common;
 
-namespace DotNetConsistency.Api.Domain.Entities;
+namespace DotNetConsistency.Domain.Entities;
 
 public class Author : BaseEntity
 {

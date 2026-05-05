@@ -1,8 +1,8 @@
-using DotNetConsistency.Api.Domain.Common;
-using DotNetConsistency.Api.Domain.Entities;
+using DotNetConsistency.Domain.Common;
+using DotNetConsistency.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace DotNetConsistency.Api.Infrastructure.Data;
+namespace DotNetConsistency.Infrastructure.Data;
 
 public class AppDbContext : DbContext
 {

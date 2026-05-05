@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace DotNetConsistency.Api.Infrastructure.ExceptionHandlers;
+namespace DotNetConsistency.Infrastructure.ExceptionHandlers;
 
 public class ConflictExceptionHandler : IExceptionHandler
 {

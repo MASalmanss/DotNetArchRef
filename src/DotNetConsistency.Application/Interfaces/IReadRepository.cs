@@ -1,6 +1,6 @@
-using DotNetConsistency.Api.Domain.Common;
+using DotNetConsistency.Domain.Common;
 
-namespace DotNetConsistency.Api.Application.Interfaces;
+namespace DotNetConsistency.Application.Interfaces;
 
 public interface IReadRepository<T> where T : BaseEntity
 {

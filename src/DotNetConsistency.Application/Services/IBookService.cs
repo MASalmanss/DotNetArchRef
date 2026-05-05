@@ -1,6 +1,6 @@
-using DotNetConsistency.Api.Application.DTOs;
+using DotNetConsistency.Application.DTOs;
 
-namespace DotNetConsistency.Api.Application.Services;
+namespace DotNetConsistency.Application.Services;
 
 public interface IBookService
 {

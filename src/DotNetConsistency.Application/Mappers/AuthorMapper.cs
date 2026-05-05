@@ -1,7 +1,7 @@
-using DotNetConsistency.Api.Application.DTOs;
-using DotNetConsistency.Api.Domain.Entities;
+using DotNetConsistency.Application.DTOs;
+using DotNetConsistency.Domain.Entities;
 
-namespace DotNetConsistency.Api.Application.Mappers;
+namespace DotNetConsistency.Application.Mappers;
 
 public static class AuthorMapper
 {

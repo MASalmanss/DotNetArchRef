@@ -1,12 +1,12 @@
-using DotNetConsistency.Api.Application.Interfaces;
-using DotNetConsistency.Api.Infrastructure.Data;
-using DotNetConsistency.Api.Infrastructure.ExceptionHandlers;
-using DotNetConsistency.Api.Infrastructure.Repositories;
+using DotNetConsistency.Application.Interfaces;
+using DotNetConsistency.Infrastructure.Data;
+using DotNetConsistency.Infrastructure.ExceptionHandlers;
+using DotNetConsistency.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DotNetConsistency.Api.Infrastructure;
+namespace DotNetConsistency.Infrastructure;
 
 public static class DependencyInjection
 {

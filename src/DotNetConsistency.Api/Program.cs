@@ -1,6 +1,6 @@
-using DotNetConsistency.Api.Application;
-using DotNetConsistency.Api.Infrastructure;
-using DotNetConsistency.Api.Infrastructure.ExceptionHandlers;
+using DotNetConsistency.Application;
+using DotNetConsistency.Infrastructure;
+using DotNetConsistency.Infrastructure.ExceptionHandlers;
 
 var builder = WebApplication.CreateBuilder(args);
 

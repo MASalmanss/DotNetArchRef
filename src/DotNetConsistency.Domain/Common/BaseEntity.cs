@@ -1,4 +1,4 @@
-namespace DotNetConsistency.Api.Domain.Common;
+namespace DotNetConsistency.Domain.Common;
 
 public abstract class BaseEntity
 {

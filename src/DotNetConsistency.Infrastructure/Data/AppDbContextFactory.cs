@@ -1,8 +1,8 @@
-using DotNetConsistency.Api.Infrastructure.Data;
+using DotNetConsistency.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace DotNetConsistency.Api.Infrastructure.Data;
+namespace DotNetConsistency.Infrastructure.Data;
 
 public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {

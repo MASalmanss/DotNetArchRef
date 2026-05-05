@@ -1,5 +1,5 @@
-using DotNetConsistency.Api.Application.DTOs;
-using DotNetConsistency.Api.Application.Services;
+using DotNetConsistency.Application.DTOs;
+using DotNetConsistency.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DotNetConsistency.Api.Controllers;

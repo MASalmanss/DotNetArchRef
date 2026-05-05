@@ -1,8 +1,8 @@
-using DotNetConsistency.Api.Domain.Entities;
+using DotNetConsistency.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace DotNetConsistency.Api.Infrastructure.Data.Configurations;
+namespace DotNetConsistency.Infrastructure.Data.Configurations;
 
 public class AuthorConfiguration : IEntityTypeConfiguration<Author>
 {

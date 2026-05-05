@@ -1,9 +1,9 @@
-using DotNetConsistency.Api.Application.DTOs;
-using DotNetConsistency.Api.Application.Mappers;
-using DotNetConsistency.Api.Domain.Entities;
-using DotNetConsistency.Api.Application.Interfaces;
+using DotNetConsistency.Application.DTOs;
+using DotNetConsistency.Application.Mappers;
+using DotNetConsistency.Domain.Entities;
+using DotNetConsistency.Application.Interfaces;
 
-namespace DotNetConsistency.Api.Application.Services;
+namespace DotNetConsistency.Application.Services;
 
 public class AuthorService : IAuthorService
 {

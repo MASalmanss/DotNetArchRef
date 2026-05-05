@@ -1,6 +1,6 @@
-using DotNetConsistency.Api.Domain.Entities;
+using DotNetConsistency.Domain.Entities;
 
-namespace DotNetConsistency.Api.Application.Interfaces;
+namespace DotNetConsistency.Application.Interfaces;
 
 public interface IAuthorRepository : IRepository<Author>
 {

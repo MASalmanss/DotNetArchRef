@@ -1,4 +1,4 @@
-namespace DotNetConsistency.Api.Application.DTOs;
+namespace DotNetConsistency.Application.DTOs;
 
 public record CreateBookRequest(
     string Title,

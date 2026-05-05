@@ -1,9 +1,9 @@
-using DotNetConsistency.Api.Application.Interfaces;
-using DotNetConsistency.Api.Domain.Entities;
-using DotNetConsistency.Api.Infrastructure.Data;
+using DotNetConsistency.Application.Interfaces;
+using DotNetConsistency.Domain.Entities;
+using DotNetConsistency.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace DotNetConsistency.Api.Infrastructure.Repositories;
+namespace DotNetConsistency.Infrastructure.Repositories;
 
 public class BookRepository : Repository<Book>, IBookRepository
 {

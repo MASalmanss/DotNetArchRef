@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace DotNetConsistency.Api.Infrastructure.ExceptionHandlers;
+namespace DotNetConsistency.Infrastructure.ExceptionHandlers;
 
 public class DefaultExceptionHandler : IExceptionHandler
 {

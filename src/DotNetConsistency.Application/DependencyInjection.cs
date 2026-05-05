@@ -1,7 +1,7 @@
-using DotNetConsistency.Api.Application.Services;
+using DotNetConsistency.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DotNetConsistency.Api.Application;
+namespace DotNetConsistency.Application;
 
 public static class DependencyInjection
 {
