@@ -1,6 +1,6 @@
 using DotNetConsistency.Api.Domain.Entities;
 
-namespace DotNetConsistency.Api.Infrastructure.Repositories;
+namespace DotNetConsistency.Api.Application.Interfaces;
 
 public interface IBookRepository : IRepository<Book>
 {

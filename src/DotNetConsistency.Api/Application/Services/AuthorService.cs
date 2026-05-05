@@ -1,6 +1,7 @@
 using DotNetConsistency.Api.Application.DTOs;
+using DotNetConsistency.Api.Application.Mappers;
 using DotNetConsistency.Api.Domain.Entities;
-using DotNetConsistency.Api.Infrastructure.Repositories;
+using DotNetConsistency.Api.Application.Interfaces;
 
 namespace DotNetConsistency.Api.Application.Services;
 
@@ -16,13 +17,13 @@ public class AuthorService : IAuthorService
     public async Task<IEnumerable<AuthorDto>> GetAllAsync(CancellationToken ct = default)
     {
         var authors = await _authors.GetAllAsync(ct);
-        return authors.Select(MapToDto);
+        return authors.Select(AuthorMapper.ToDto);
     }
 
     public async Task<AuthorDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var author = await _authors.GetByIdAsync(id, ct);
-        return author is null ? null : MapToDto(author);
+        return author is null ? null : AuthorMapper.ToDto(author);
     }
 
     public async Task<AuthorDto> CreateAsync(CreateAuthorRequest request, CancellationToken ct = default)
@@ -40,7 +41,7 @@ public class AuthorService : IAuthorService
         await _authors.AddAsync(author, ct);
         await _authors.SaveChangesAsync(ct);
 
-        return MapToDto(author);
+        return AuthorMapper.ToDto(author);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
@@ -51,7 +52,4 @@ public class AuthorService : IAuthorService
         _authors.Delete(author);
         await _authors.SaveChangesAsync(ct);
     }
-
-    private static AuthorDto MapToDto(Author author)
-        => new(author.Id, author.Name, author.Email, author.CreatedAt);
 }

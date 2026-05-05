@@ -1,3 +1,4 @@
+using DotNetConsistency.Api.Application.Interfaces;
 using DotNetConsistency.Api.Domain.Common;
 using DotNetConsistency.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;

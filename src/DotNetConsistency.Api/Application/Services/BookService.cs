@@ -1,6 +1,7 @@
 using DotNetConsistency.Api.Application.DTOs;
+using DotNetConsistency.Api.Application.Mappers;
 using DotNetConsistency.Api.Domain.Entities;
-using DotNetConsistency.Api.Infrastructure.Repositories;
+using DotNetConsistency.Api.Application.Interfaces;
 
 namespace DotNetConsistency.Api.Application.Services;
 
@@ -18,7 +19,7 @@ public class BookService : IBookService
     public async Task<IEnumerable<BookDto>> GetAllAsync(CancellationToken ct = default)
     {
         var books = await _books.GetAllAsync(ct);
-        return books.Select(b => new BookDto(b.Id, b.Title, b.ISBN, b.Price, b.AuthorId, string.Empty, b.CreatedAt));
+        return books.Select(b => BookMapper.ToDto(b, string.Empty));
     }
 
     public async Task<BookDto?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -27,7 +28,7 @@ public class BookService : IBookService
         if (book is null) return null;
 
         var author = await _authors.GetByIdAsync(book.AuthorId, ct);
-        return MapToDto(book, author?.Name ?? string.Empty);
+        return BookMapper.ToDto(book, author?.Name ?? string.Empty);
     }
 
     public async Task<BookDto> CreateAsync(CreateBookRequest request, CancellationToken ct = default)
@@ -50,7 +51,7 @@ public class BookService : IBookService
         await _books.AddAsync(book, ct);
         await _books.SaveChangesAsync(ct);
 
-        return MapToDto(book, author.Name);
+        return BookMapper.ToDto(book, author.Name);
     }
 
     public async Task<BookDto> UpdateAsync(int id, UpdateBookRequest request, CancellationToken ct = default)
@@ -65,7 +66,7 @@ public class BookService : IBookService
         await _books.SaveChangesAsync(ct);
 
         var author = await _authors.GetByIdAsync(book.AuthorId, ct);
-        return MapToDto(book, author?.Name ?? string.Empty);
+        return BookMapper.ToDto(book, author?.Name ?? string.Empty);
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
@@ -76,7 +77,4 @@ public class BookService : IBookService
         _books.Delete(book);
         await _books.SaveChangesAsync(ct);
     }
-
-    private static BookDto MapToDto(Book book, string authorName)
-        => new(book.Id, book.Title, book.ISBN, book.Price, book.AuthorId, authorName, book.CreatedAt);
 }
