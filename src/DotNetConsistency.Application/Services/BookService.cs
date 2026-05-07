@@ -1,44 +1,68 @@
+using DotNetConsistency.Application.Common;
 using DotNetConsistency.Application.DTOs;
+using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Application.Mappers;
 using DotNetConsistency.Domain.Entities;
-using DotNetConsistency.Application.Interfaces;
+using FluentValidation;
 
 namespace DotNetConsistency.Application.Services;
 
 public class BookService : IBookService
 {
-    private readonly IBookRepository _books;
-    private readonly IAuthorRepository _authors;
+    private readonly IUnitOfWork _uow;
+    private readonly IValidator<CreateBookRequest> _createValidator;
+    private readonly IValidator<UpdateBookRequest> _updateValidator;
 
-    public BookService(IBookRepository books, IAuthorRepository authors)
+    public BookService(
+        IUnitOfWork uow,
+        IValidator<CreateBookRequest> createValidator,
+        IValidator<UpdateBookRequest> updateValidator)
     {
-        _books = books;
-        _authors = authors;
+        _uow = uow;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
 
-    public async Task<IEnumerable<BookDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<Result<IEnumerable<BookDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var books = await _books.GetAllAsync(ct);
-        return books.Select(b => BookMapper.ToDto(b, string.Empty));
+        var books = (await _uow.Books.GetAllAsync(ct)).ToList();
+
+        var authorMap = new Dictionary<int, string>();
+        foreach (var authorId in books.Select(b => b.AuthorId).Distinct())
+        {
+            var author = await _uow.Authors.GetByIdAsync(authorId, ct);
+            authorMap[authorId] = author?.Name ?? string.Empty;
+        }
+
+        var dtos = books.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty)));
+        return Result<IEnumerable<BookDto>>.Ok(dtos);
     }
 
-    public async Task<BookDto?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<Result<BookDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var book = await _books.GetByIdAsync(id, ct);
-        if (book is null) return null;
+        var book = await _uow.Books.GetByIdAsync(id, ct);
+        if (book is null)
+            return Error.NotFound($"Book with id {id} not found.");
 
-        var author = await _authors.GetByIdAsync(book.AuthorId, ct);
+        var author = await _uow.Authors.GetByIdAsync(book.AuthorId, ct);
         return BookMapper.ToDto(book, author?.Name ?? string.Empty);
     }
 
-    public async Task<BookDto> CreateAsync(CreateBookRequest request, CancellationToken ct = default)
+    public async Task<Result<BookDto>> CreateAsync(CreateBookRequest request, CancellationToken ct = default)
     {
-        var author = await _authors.GetByIdAsync(request.AuthorId, ct)
-            ?? throw new KeyNotFoundException($"Author with id {request.AuthorId} not found.");
+        var validation = await _createValidator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+            return Error.Validation(
+                "One or more validation errors occurred.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList());
 
-        var existing = await _books.GetByIsbnAsync(request.ISBN, ct);
+        var author = await _uow.Authors.GetByIdAsync(request.AuthorId, ct);
+        if (author is null)
+            return Error.NotFound($"Author with id {request.AuthorId} not found.");
+
+        var existing = await _uow.Books.GetByIsbnAsync(request.ISBN, ct);
         if (existing is not null)
-            throw new InvalidOperationException($"A book with ISBN '{request.ISBN}' already exists.");
+            return Error.Conflict($"A book with ISBN '{request.ISBN}' already exists.");
 
         var book = new Book
         {
@@ -48,33 +72,43 @@ public class BookService : IBookService
             AuthorId = request.AuthorId
         };
 
-        await _books.AddAsync(book, ct);
-        await _books.SaveChangesAsync(ct);
+        await _uow.Books.AddAsync(book, ct);
+        await _uow.CommitAsync(ct);
 
         return BookMapper.ToDto(book, author.Name);
     }
 
-    public async Task<BookDto> UpdateAsync(int id, UpdateBookRequest request, CancellationToken ct = default)
+    public async Task<Result<BookDto>> UpdateAsync(int id, UpdateBookRequest request, CancellationToken ct = default)
     {
-        var book = await _books.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Book with id {id} not found.");
+        var validation = await _updateValidator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+            return Error.Validation(
+                "One or more validation errors occurred.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList());
+
+        var book = await _uow.Books.GetByIdAsync(id, ct);
+        if (book is null)
+            return Error.NotFound($"Book with id {id} not found.");
 
         book.Title = request.Title;
         book.Price = request.Price;
 
-        _books.Update(book);
-        await _books.SaveChangesAsync(ct);
+        _uow.Books.Update(book);
+        await _uow.CommitAsync(ct);
 
-        var author = await _authors.GetByIdAsync(book.AuthorId, ct);
+        var author = await _uow.Authors.GetByIdAsync(book.AuthorId, ct);
         return BookMapper.ToDto(book, author?.Name ?? string.Empty);
     }
 
-    public async Task DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<Result> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var book = await _books.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Book with id {id} not found.");
+        var book = await _uow.Books.GetByIdAsync(id, ct);
+        if (book is null)
+            return Result.Fail(Error.NotFound($"Book with id {id} not found."));
 
-        _books.Delete(book);
-        await _books.SaveChangesAsync(ct);
+        _uow.Books.Delete(book);
+        await _uow.CommitAsync(ct);
+
+        return Result.Ok();
     }
 }

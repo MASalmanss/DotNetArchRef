@@ -1,36 +1,51 @@
+using DotNetConsistency.Application.Common;
 using DotNetConsistency.Application.DTOs;
+using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Application.Mappers;
 using DotNetConsistency.Domain.Entities;
-using DotNetConsistency.Application.Interfaces;
+using FluentValidation;
 
 namespace DotNetConsistency.Application.Services;
 
 public class AuthorService : IAuthorService
 {
-    private readonly IAuthorRepository _authors;
+    private readonly IUnitOfWork _uow;
+    private readonly IValidator<CreateAuthorRequest> _createValidator;
 
-    public AuthorService(IAuthorRepository authors)
+    public AuthorService(
+        IUnitOfWork uow,
+        IValidator<CreateAuthorRequest> createValidator)
     {
-        _authors = authors;
+        _uow = uow;
+        _createValidator = createValidator;
     }
 
-    public async Task<IEnumerable<AuthorDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<Result<IEnumerable<AuthorDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var authors = await _authors.GetAllAsync(ct);
-        return authors.Select(AuthorMapper.ToDto);
+        var authors = await _uow.Authors.GetAllAsync(ct);
+        return Result<IEnumerable<AuthorDto>>.Ok(authors.Select(AuthorMapper.ToDto));
     }
 
-    public async Task<AuthorDto?> GetByIdAsync(int id, CancellationToken ct = default)
+    public async Task<Result<AuthorDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var author = await _authors.GetByIdAsync(id, ct);
-        return author is null ? null : AuthorMapper.ToDto(author);
+        var author = await _uow.Authors.GetByIdAsync(id, ct);
+        if (author is null)
+            return Error.NotFound($"Author with id {id} not found.");
+
+        return AuthorMapper.ToDto(author);
     }
 
-    public async Task<AuthorDto> CreateAsync(CreateAuthorRequest request, CancellationToken ct = default)
+    public async Task<Result<AuthorDto>> CreateAsync(CreateAuthorRequest request, CancellationToken ct = default)
     {
-        var existing = await _authors.GetByEmailAsync(request.Email, ct);
+        var validation = await _createValidator.ValidateAsync(request, ct);
+        if (!validation.IsValid)
+            return Error.Validation(
+                "One or more validation errors occurred.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList());
+
+        var existing = await _uow.Authors.GetByEmailAsync(request.Email, ct);
         if (existing is not null)
-            throw new InvalidOperationException($"An author with email '{request.Email}' already exists.");
+            return Error.Conflict($"An author with email '{request.Email}' already exists.");
 
         var author = new Author
         {
@@ -38,18 +53,21 @@ public class AuthorService : IAuthorService
             Email = request.Email
         };
 
-        await _authors.AddAsync(author, ct);
-        await _authors.SaveChangesAsync(ct);
+        await _uow.Authors.AddAsync(author, ct);
+        await _uow.CommitAsync(ct);
 
         return AuthorMapper.ToDto(author);
     }
 
-    public async Task DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<Result> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var author = await _authors.GetByIdAsync(id, ct)
-            ?? throw new KeyNotFoundException($"Author with id {id} not found.");
+        var author = await _uow.Authors.GetByIdAsync(id, ct);
+        if (author is null)
+            return Result.Fail(Error.NotFound($"Author with id {id} not found."));
 
-        _authors.Delete(author);
-        await _authors.SaveChangesAsync(ct);
+        _uow.Authors.Delete(author);
+        await _uow.CommitAsync(ct);
+
+        return Result.Ok();
     }
 }
