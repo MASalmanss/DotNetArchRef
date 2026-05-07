@@ -3,27 +3,16 @@ using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Application.Mappers;
 using DotNetConsistency.Domain.Entities;
-using FluentValidation;
 
 namespace DotNetConsistency.Application.Services;
 
 public class BookService : IBookService
 {
     private readonly IUnitOfWork _uow;
-    private readonly IValidator<CreateBookRequest> _createValidator;
-    private readonly IValidator<UpdateBookRequest> _updateValidator;
-    private readonly IValidator<PagedQuery> _pagedValidator;
 
-    public BookService(
-        IUnitOfWork uow,
-        IValidator<CreateBookRequest> createValidator,
-        IValidator<UpdateBookRequest> updateValidator,
-        IValidator<PagedQuery> pagedValidator)
+    public BookService(IUnitOfWork uow)
     {
         _uow = uow;
-        _createValidator = createValidator;
-        _updateValidator = updateValidator;
-        _pagedValidator = pagedValidator;
     }
 
     public async Task<Result<IEnumerable<BookDto>>> GetAllAsync(CancellationToken ct = default)
@@ -36,12 +25,6 @@ public class BookService : IBookService
 
     public async Task<Result<PagedResult<BookDto>>> GetPagedAsync(PagedQuery query, CancellationToken ct = default)
     {
-        var validation = await _pagedValidator.ValidateAsync(query, ct);
-        if (!validation.IsValid)
-            return Error.Validation(
-                "Geçersiz sayfalama parametreleri.",
-                validation.Errors.Select(e => e.ErrorMessage).ToList());
-
         var paged = await _uow.Books.GetPagedAsync(query.Page, query.PageSize, ct);
         var authorMap = await BuildAuthorMapAsync(paged.Items.Select(b => b.AuthorId).Distinct(), ct);
         var dtos = paged.Items.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty)));
@@ -60,12 +43,6 @@ public class BookService : IBookService
 
     public async Task<Result<BookDto>> CreateAsync(CreateBookRequest request, CancellationToken ct = default)
     {
-        var validation = await _createValidator.ValidateAsync(request, ct);
-        if (!validation.IsValid)
-            return Error.Validation(
-                "One or more validation errors occurred.",
-                validation.Errors.Select(e => e.ErrorMessage).ToList());
-
         var author = await _uow.Authors.GetByIdAsync(request.AuthorId, ct);
         if (author is null)
             return Error.NotFound($"Author with id {request.AuthorId} not found.");
@@ -90,12 +67,6 @@ public class BookService : IBookService
 
     public async Task<Result<BookDto>> UpdateAsync(int id, UpdateBookRequest request, CancellationToken ct = default)
     {
-        var validation = await _updateValidator.ValidateAsync(request, ct);
-        if (!validation.IsValid)
-            return Error.Validation(
-                "One or more validation errors occurred.",
-                validation.Errors.Select(e => e.ErrorMessage).ToList());
-
         var book = await _uow.Books.GetByIdAsync(id, ct);
         if (book is null)
             return Error.NotFound($"Book with id {id} not found.");
