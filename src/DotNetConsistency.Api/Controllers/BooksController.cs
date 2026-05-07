@@ -23,6 +23,13 @@ public class BooksController : ControllerBase
         return result.ToActionResult(this);
     }
 
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
+    {
+        var result = await _bookService.GetPagedAsync(page, pageSize, ct);
+        return result.ToActionResult(this);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {

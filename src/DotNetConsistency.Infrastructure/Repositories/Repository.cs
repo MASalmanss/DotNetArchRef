@@ -1,3 +1,4 @@
+using DotNetConsistency.Application.Common;
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Domain.Common;
 using DotNetConsistency.Infrastructure.Data;
@@ -21,6 +22,16 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
     public async Task<IEnumerable<T>> GetAllAsync(CancellationToken ct = default)
         => await _dbSet.AsNoTracking().ToListAsync(ct);
+
+    public async Task<PagedResult<T>> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
+    {
+        var total = await _dbSet.CountAsync(ct);
+        var items = await _dbSet.AsNoTracking()
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return new PagedResult<T>(items, total, page, pageSize);
+    }
 
     public async Task AddAsync(T entity, CancellationToken ct = default)
         => await _dbSet.AddAsync(entity, ct);

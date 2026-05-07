@@ -26,16 +26,17 @@ public class BookService : IBookService
     public async Task<Result<IEnumerable<BookDto>>> GetAllAsync(CancellationToken ct = default)
     {
         var books = (await _uow.Books.GetAllAsync(ct)).ToList();
+        var authorMap = await BuildAuthorMapAsync(books.Select(b => b.AuthorId).Distinct(), ct);
+        return Result<IEnumerable<BookDto>>.Ok(
+            books.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty))));
+    }
 
-        var authorMap = new Dictionary<int, string>();
-        foreach (var authorId in books.Select(b => b.AuthorId).Distinct())
-        {
-            var author = await _uow.Authors.GetByIdAsync(authorId, ct);
-            authorMap[authorId] = author?.Name ?? string.Empty;
-        }
-
-        var dtos = books.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty)));
-        return Result<IEnumerable<BookDto>>.Ok(dtos);
+    public async Task<Result<PagedResult<BookDto>>> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
+    {
+        var paged = await _uow.Books.GetPagedAsync(page, pageSize, ct);
+        var authorMap = await BuildAuthorMapAsync(paged.Items.Select(b => b.AuthorId).Distinct(), ct);
+        var dtos = paged.Items.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty)));
+        return Result<PagedResult<BookDto>>.Ok(new PagedResult<BookDto>(dtos, paged.TotalCount, page, pageSize));
     }
 
     public async Task<Result<BookDto>> GetByIdAsync(int id, CancellationToken ct = default)
@@ -110,5 +111,16 @@ public class BookService : IBookService
         await _uow.CommitAsync(ct);
 
         return Result.Ok();
+    }
+
+    private async Task<Dictionary<int, string>> BuildAuthorMapAsync(IEnumerable<int> authorIds, CancellationToken ct)
+    {
+        var map = new Dictionary<int, string>();
+        foreach (var id in authorIds)
+        {
+            var author = await _uow.Authors.GetByIdAsync(id, ct);
+            map[id] = author?.Name ?? string.Empty;
+        }
+        return map;
     }
 }

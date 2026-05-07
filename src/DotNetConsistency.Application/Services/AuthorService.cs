@@ -26,6 +26,13 @@ public class AuthorService : IAuthorService
         return Result<IEnumerable<AuthorDto>>.Ok(authors.Select(AuthorMapper.ToDto));
     }
 
+    public async Task<Result<PagedResult<AuthorDto>>> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
+    {
+        var paged = await _uow.Authors.GetPagedAsync(page, pageSize, ct);
+        var dtos = paged.Items.Select(AuthorMapper.ToDto);
+        return Result<PagedResult<AuthorDto>>.Ok(new PagedResult<AuthorDto>(dtos, paged.TotalCount, page, pageSize));
+    }
+
     public async Task<Result<AuthorDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var author = await _uow.Authors.GetByIdAsync(id, ct);
