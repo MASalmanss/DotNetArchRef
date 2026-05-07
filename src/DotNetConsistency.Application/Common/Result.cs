@@ -1,9 +1,13 @@
+using System.Text.Json.Serialization;
+
 namespace DotNetConsistency.Application.Common;
 
 public sealed class Result<T>
 {
+    [JsonIgnore]
     public bool IsSuccess { get; }
     public T? Value { get; }
+    [JsonIgnore]
     public Error? Error { get; }
 
     private Result(T value)
@@ -27,7 +31,9 @@ public sealed class Result<T>
 
 public sealed class Result
 {
+    [JsonIgnore]
     public bool IsSuccess { get; }
+    [JsonIgnore]
     public Error? Error { get; }
 
     private Result()
