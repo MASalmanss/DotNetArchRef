@@ -1,3 +1,4 @@
+using DotNetConsistency.Api.Extensions;
 using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,30 +17,30 @@ public class AuthorsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<AuthorDto>>> GetAll(CancellationToken ct)
+    public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        var authors = await _authorService.GetAllAsync(ct);
-        return Ok(authors);
+        var result = await _authorService.GetAllAsync(ct);
+        return result.ToActionResult(this);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<AuthorDto>> GetById(int id, CancellationToken ct)
+    public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
-        var author = await _authorService.GetByIdAsync(id, ct);
-        return author is null ? NotFound() : Ok(author);
+        var result = await _authorService.GetByIdAsync(id, ct);
+        return result.ToActionResult(this);
     }
 
     [HttpPost]
-    public async Task<ActionResult<AuthorDto>> Create(CreateAuthorRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create(CreateAuthorRequest request, CancellationToken ct)
     {
-        var author = await _authorService.CreateAsync(request, ct);
-        return CreatedAtAction(nameof(GetById), new { id = author.Id }, author);
+        var result = await _authorService.CreateAsync(request, ct);
+        return result.ToCreatedResult(this, nameof(GetById), a => new { id = a.Id });
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        await _authorService.DeleteAsync(id, ct);
-        return NoContent();
+        var result = await _authorService.DeleteAsync(id, ct);
+        return result.ToNoContentResult(this);
     }
 }

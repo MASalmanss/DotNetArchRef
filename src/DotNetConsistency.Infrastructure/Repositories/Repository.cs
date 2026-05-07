@@ -30,7 +30,4 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
     public void Delete(T entity)
         => _dbSet.Remove(entity);
-
-    public async Task<int> SaveChangesAsync(CancellationToken ct = default)
-        => await _context.SaveChangesAsync(ct);
 }

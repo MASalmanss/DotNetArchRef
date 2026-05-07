@@ -1,3 +1,4 @@
+using DotNetConsistency.Api.Extensions;
 using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,37 +17,37 @@ public class BooksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<BookDto>>> GetAll(CancellationToken ct)
+    public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        var books = await _bookService.GetAllAsync(ct);
-        return Ok(books);
+        var result = await _bookService.GetAllAsync(ct);
+        return result.ToActionResult(this);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<BookDto>> GetById(int id, CancellationToken ct)
+    public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
-        var book = await _bookService.GetByIdAsync(id, ct);
-        return book is null ? NotFound() : Ok(book);
+        var result = await _bookService.GetByIdAsync(id, ct);
+        return result.ToActionResult(this);
     }
 
     [HttpPost]
-    public async Task<ActionResult<BookDto>> Create(CreateBookRequest request, CancellationToken ct)
+    public async Task<IActionResult> Create(CreateBookRequest request, CancellationToken ct)
     {
-        var book = await _bookService.CreateAsync(request, ct);
-        return CreatedAtAction(nameof(GetById), new { id = book.Id }, book);
+        var result = await _bookService.CreateAsync(request, ct);
+        return result.ToCreatedResult(this, nameof(GetById), b => new { id = b.Id });
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<BookDto>> Update(int id, UpdateBookRequest request, CancellationToken ct)
+    public async Task<IActionResult> Update(int id, UpdateBookRequest request, CancellationToken ct)
     {
-        var book = await _bookService.UpdateAsync(id, request, ct);
-        return Ok(book);
+        var result = await _bookService.UpdateAsync(id, request, ct);
+        return result.ToActionResult(this);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
-        await _bookService.DeleteAsync(id, ct);
-        return NoContent();
+        var result = await _bookService.DeleteAsync(id, ct);
+        return result.ToNoContentResult(this);
     }
 }
