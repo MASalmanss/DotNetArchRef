@@ -1,5 +1,6 @@
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Domain.Entities;
+using DotNetConsistency.Domain.ValueObjects;
 using DotNetConsistency.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +12,7 @@ public class BookRepository : Repository<Book>, IBookRepository
 
     public async Task<Book?> GetByIsbnAsync(string isbn, CancellationToken ct = default)
         => await _dbSet.AsNoTracking()
-            .FirstOrDefaultAsync(b => b.ISBN == isbn, ct);
+            .FirstOrDefaultAsync(b => b.ISBN == ISBN.Create(isbn), ct);
 
     public async Task<IEnumerable<Book>> GetByAuthorAsync(int authorId, CancellationToken ct = default)
         => await _dbSet.AsNoTracking()

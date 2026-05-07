@@ -3,6 +3,7 @@ using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Application.Mappers;
 using DotNetConsistency.Domain.Entities;
+using DotNetConsistency.Domain.ValueObjects;
 
 namespace DotNetConsistency.Application.Services;
 
@@ -51,13 +52,11 @@ public class BookService : IBookService
         if (existing is not null)
             return Error.Conflict($"A book with ISBN '{request.ISBN}' already exists.");
 
-        var book = new Book
-        {
-            Title = request.Title,
-            ISBN = request.ISBN,
-            Price = request.Price,
-            AuthorId = request.AuthorId
-        };
+        var book = Book.Create(
+            request.Title,
+            ISBN.Create(request.ISBN),
+            Money.Create(request.Price),
+            request.AuthorId);
 
         await _uow.Books.AddAsync(book, ct);
         await _uow.CommitAsync(ct);
@@ -71,8 +70,7 @@ public class BookService : IBookService
         if (book is null)
             return Error.NotFound($"Book with id {id} not found.");
 
-        book.Title = request.Title;
-        book.Price = request.Price;
+        book.UpdateDetails(request.Title, Money.Create(request.Price));
 
         _uow.Books.Update(book);
         await _uow.CommitAsync(ct);

@@ -1,4 +1,4 @@
-namespace DotNetConsistency.Infrastructure.ExceptionHandlers;
+namespace DotNetConsistency.Api.ExceptionHandlers;
 
 public interface IExceptionHandler
 {

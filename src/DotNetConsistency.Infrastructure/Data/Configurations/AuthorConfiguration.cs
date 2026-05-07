@@ -1,4 +1,5 @@
 using DotNetConsistency.Domain.Entities;
+using DotNetConsistency.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,6 +16,9 @@ public class AuthorConfiguration : IEntityTypeConfiguration<Author>
             .HasMaxLength(200);
 
         builder.Property(a => a.Email)
+            .HasConversion(
+                email => email.Value,
+                value => Email.Create(value))
             .IsRequired()
             .HasMaxLength(300);
 

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace DotNetConsistency.Infrastructure.ExceptionHandlers;
+namespace DotNetConsistency.Api.ExceptionHandlers;
 
 public class NotFoundExceptionHandler : IExceptionHandler
 {

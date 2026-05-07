@@ -1,6 +1,5 @@
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Infrastructure.Data;
-using DotNetConsistency.Infrastructure.ExceptionHandlers;
 using DotNetConsistency.Infrastructure.Persistence;
 using DotNetConsistency.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -21,10 +20,6 @@ public static class DependencyInjection
         services.AddScoped<IAuthorRepository, AuthorRepository>();
         services.AddScoped<IBookRepository, BookRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-        services.AddSingleton<IExceptionHandler, NotFoundExceptionHandler>();
-        services.AddSingleton<IExceptionHandler, ConflictExceptionHandler>();
-        services.AddSingleton<IExceptionHandler, DefaultExceptionHandler>();
 
         return services;
     }

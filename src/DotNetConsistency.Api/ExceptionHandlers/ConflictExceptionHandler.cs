@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace DotNetConsistency.Infrastructure.ExceptionHandlers;
+namespace DotNetConsistency.Api.ExceptionHandlers;
 
 public class ConflictExceptionHandler : IExceptionHandler
 {
@@ -11,7 +11,7 @@ public class ConflictExceptionHandler : IExceptionHandler
     public (int StatusCode, string Message) Handle(Exception exception)
     {
         var message = exception is DbUpdateException
-            ? "Operation violates a data integrity constraint."
+            ? "İşlem veri bütünlüğü kısıtlamasını ihlal ediyor."
             : exception.Message;
 
         return (StatusCodes.Status409Conflict, message);

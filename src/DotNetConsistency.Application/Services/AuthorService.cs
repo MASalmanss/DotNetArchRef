@@ -3,6 +3,7 @@ using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Application.Mappers;
 using DotNetConsistency.Domain.Entities;
+using DotNetConsistency.Domain.ValueObjects;
 
 namespace DotNetConsistency.Application.Services;
 
@@ -43,11 +44,7 @@ public class AuthorService : IAuthorService
         if (existing is not null)
             return Error.Conflict($"An author with email '{request.Email}' already exists.");
 
-        var author = new Author
-        {
-            Name = request.Name,
-            Email = request.Email
-        };
+        var author = Author.Create(request.Name, Email.Create(request.Email));
 
         await _uow.Authors.AddAsync(author, ct);
         await _uow.CommitAsync(ct);

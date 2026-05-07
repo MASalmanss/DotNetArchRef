@@ -6,5 +6,5 @@ namespace DotNetConsistency.Application.Mappers;
 public static class AuthorMapper
 {
     public static AuthorDto ToDto(Author author)
-        => new(author.Id, author.Name, author.Email, author.CreatedAt);
+        => new(author.Id, author.Name, author.Email.Value, author.CreatedAt);
 }

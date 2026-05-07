@@ -1,6 +1,5 @@
-using DotNetConsistency.Infrastructure.ExceptionHandlers;
 using Microsoft.AspNetCore.Diagnostics;
-using IExceptionHandler = DotNetConsistency.Infrastructure.ExceptionHandlers.IExceptionHandler;
+using IExceptionHandler = DotNetConsistency.Api.ExceptionHandlers.IExceptionHandler;
 
 namespace DotNetConsistency.Api.Extensions;
 

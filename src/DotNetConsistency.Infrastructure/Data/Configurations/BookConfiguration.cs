@@ -1,4 +1,5 @@
 using DotNetConsistency.Domain.Entities;
+using DotNetConsistency.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -15,6 +16,9 @@ public class BookConfiguration : IEntityTypeConfiguration<Book>
             .HasMaxLength(500);
 
         builder.Property(b => b.ISBN)
+            .HasConversion(
+                isbn => isbn.Value,
+                value => ISBN.Create(value))
             .IsRequired()
             .HasMaxLength(20);
 
@@ -22,6 +26,9 @@ public class BookConfiguration : IEntityTypeConfiguration<Book>
             .IsUnique();
 
         builder.Property(b => b.Price)
+            .HasConversion(
+                money => money.Amount,
+                amount => Money.Create(amount))
             .HasPrecision(18, 2);
     }
 }

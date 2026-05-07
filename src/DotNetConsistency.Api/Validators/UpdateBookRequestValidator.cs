@@ -1,7 +1,7 @@
 using DotNetConsistency.Application.DTOs;
 using FluentValidation;
 
-namespace DotNetConsistency.Application.Validators;
+namespace DotNetConsistency.Api.Validators;
 
 public class UpdateBookRequestValidator : AbstractValidator<UpdateBookRequest>
 {

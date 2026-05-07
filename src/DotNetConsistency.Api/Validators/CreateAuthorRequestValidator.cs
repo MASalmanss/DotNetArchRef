@@ -1,7 +1,7 @@
 using DotNetConsistency.Application.DTOs;
 using FluentValidation;
 
-namespace DotNetConsistency.Application.Validators;
+namespace DotNetConsistency.Api.Validators;
 
 public class CreateAuthorRequestValidator : AbstractValidator<CreateAuthorRequest>
 {
@@ -12,8 +12,8 @@ public class CreateAuthorRequestValidator : AbstractValidator<CreateAuthorReques
             .MaximumLength(200).WithMessage("Yazar adı en fazla {MaxLength} karakter olabilir.");
 
         RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("E-posta adresi boş bırakılamaz.")
-            .MaximumLength(300).WithMessage("E-posta adresi en fazla {MaxLength} karakter olabilir.")
+            .NotEmpty().WithMessage("E-posta boş bırakılamaz.")
+            .MaximumLength(300).WithMessage("E-posta en fazla {MaxLength} karakter olabilir.")
             .EmailAddress().WithMessage("Geçerli bir e-posta adresi girilmelidir.");
     }
 }
