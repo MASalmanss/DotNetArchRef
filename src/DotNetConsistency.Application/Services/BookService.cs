@@ -12,15 +12,18 @@ public class BookService : IBookService
     private readonly IUnitOfWork _uow;
     private readonly IValidator<CreateBookRequest> _createValidator;
     private readonly IValidator<UpdateBookRequest> _updateValidator;
+    private readonly IValidator<PagedQuery> _pagedValidator;
 
     public BookService(
         IUnitOfWork uow,
         IValidator<CreateBookRequest> createValidator,
-        IValidator<UpdateBookRequest> updateValidator)
+        IValidator<UpdateBookRequest> updateValidator,
+        IValidator<PagedQuery> pagedValidator)
     {
         _uow = uow;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _pagedValidator = pagedValidator;
     }
 
     public async Task<Result<IEnumerable<BookDto>>> GetAllAsync(CancellationToken ct = default)
@@ -31,12 +34,18 @@ public class BookService : IBookService
             books.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty))));
     }
 
-    public async Task<Result<PagedResult<BookDto>>> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
+    public async Task<Result<PagedResult<BookDto>>> GetPagedAsync(PagedQuery query, CancellationToken ct = default)
     {
-        var paged = await _uow.Books.GetPagedAsync(page, pageSize, ct);
+        var validation = await _pagedValidator.ValidateAsync(query, ct);
+        if (!validation.IsValid)
+            return Error.Validation(
+                "Geçersiz sayfalama parametreleri.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList());
+
+        var paged = await _uow.Books.GetPagedAsync(query.Page, query.PageSize, ct);
         var authorMap = await BuildAuthorMapAsync(paged.Items.Select(b => b.AuthorId).Distinct(), ct);
         var dtos = paged.Items.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty)));
-        return Result<PagedResult<BookDto>>.Ok(new PagedResult<BookDto>(dtos, paged.TotalCount, page, pageSize));
+        return Result<PagedResult<BookDto>>.Ok(new PagedResult<BookDto>(dtos, paged.TotalCount, query.Page, query.PageSize));
     }
 
     public async Task<Result<BookDto>> GetByIdAsync(int id, CancellationToken ct = default)

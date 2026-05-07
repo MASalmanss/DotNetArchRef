@@ -24,9 +24,9 @@ public class AuthorsController : ControllerBase
     }
 
     [HttpGet("paged")]
-    public async Task<IActionResult> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
+    public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query, CancellationToken ct)
     {
-        var result = await _authorService.GetPagedAsync(page, pageSize, ct);
+        var result = await _authorService.GetPagedAsync(query, ct);
         return result.ToActionResult(this);
     }
 

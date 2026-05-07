@@ -8,12 +8,12 @@ public class CreateAuthorRequestValidator : AbstractValidator<CreateAuthorReques
     public CreateAuthorRequestValidator()
     {
         RuleFor(x => x.Name)
-            .NotEmpty()
-            .MaximumLength(200);
+            .NotEmpty().WithMessage("Yazar adı boş bırakılamaz.")
+            .MaximumLength(200).WithMessage("Yazar adı en fazla {MaxLength} karakter olabilir.");
 
         RuleFor(x => x.Email)
-            .NotEmpty()
-            .MaximumLength(300)
-            .EmailAddress();
+            .NotEmpty().WithMessage("E-posta adresi boş bırakılamaz.")
+            .MaximumLength(300).WithMessage("E-posta adresi en fazla {MaxLength} karakter olabilir.")
+            .EmailAddress().WithMessage("Geçerli bir e-posta adresi girilmelidir.");
     }
 }

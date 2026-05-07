@@ -11,13 +11,16 @@ public class AuthorService : IAuthorService
 {
     private readonly IUnitOfWork _uow;
     private readonly IValidator<CreateAuthorRequest> _createValidator;
+    private readonly IValidator<PagedQuery> _pagedValidator;
 
     public AuthorService(
         IUnitOfWork uow,
-        IValidator<CreateAuthorRequest> createValidator)
+        IValidator<CreateAuthorRequest> createValidator,
+        IValidator<PagedQuery> pagedValidator)
     {
         _uow = uow;
         _createValidator = createValidator;
+        _pagedValidator = pagedValidator;
     }
 
     public async Task<Result<IEnumerable<AuthorDto>>> GetAllAsync(CancellationToken ct = default)
@@ -26,11 +29,17 @@ public class AuthorService : IAuthorService
         return Result<IEnumerable<AuthorDto>>.Ok(authors.Select(AuthorMapper.ToDto));
     }
 
-    public async Task<Result<PagedResult<AuthorDto>>> GetPagedAsync(int page, int pageSize, CancellationToken ct = default)
+    public async Task<Result<PagedResult<AuthorDto>>> GetPagedAsync(PagedQuery query, CancellationToken ct = default)
     {
-        var paged = await _uow.Authors.GetPagedAsync(page, pageSize, ct);
+        var validation = await _pagedValidator.ValidateAsync(query, ct);
+        if (!validation.IsValid)
+            return Error.Validation(
+                "Geçersiz sayfalama parametreleri.",
+                validation.Errors.Select(e => e.ErrorMessage).ToList());
+
+        var paged = await _uow.Authors.GetPagedAsync(query.Page, query.PageSize, ct);
         var dtos = paged.Items.Select(AuthorMapper.ToDto);
-        return Result<PagedResult<AuthorDto>>.Ok(new PagedResult<AuthorDto>(dtos, paged.TotalCount, page, pageSize));
+        return Result<PagedResult<AuthorDto>>.Ok(new PagedResult<AuthorDto>(dtos, paged.TotalCount, query.Page, query.PageSize));
     }
 
     public async Task<Result<AuthorDto>> GetByIdAsync(int id, CancellationToken ct = default)
