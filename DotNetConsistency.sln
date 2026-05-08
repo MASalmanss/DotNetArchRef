@@ -13,6 +13,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetConsistency.Applicati
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetConsistency.Infrastructure", "src\DotNetConsistency.Infrastructure\DotNetConsistency.Infrastructure.csproj", "{07A543B3-59DB-4647-B609-8B9CD08BC07E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F90FCBBD-D0DA-4763-A8B4-936E9E829900}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetConsistency.Domain.Tests", "tests\DotNetConsistency.Domain.Tests\DotNetConsistency.Domain.Tests.csproj", "{24FFFD5F-094E-4753-85AC-95CE6BADCE2F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetConsistency.Application.Tests", "tests\DotNetConsistency.Application.Tests\DotNetConsistency.Application.Tests.csproj", "{F467A50F-8980-4637-A1E2-396A64C9645E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,11 +44,21 @@ Global
 		{07A543B3-59DB-4647-B609-8B9CD08BC07E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{07A543B3-59DB-4647-B609-8B9CD08BC07E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{07A543B3-59DB-4647-B609-8B9CD08BC07E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24FFFD5F-094E-4753-85AC-95CE6BADCE2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24FFFD5F-094E-4753-85AC-95CE6BADCE2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24FFFD5F-094E-4753-85AC-95CE6BADCE2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24FFFD5F-094E-4753-85AC-95CE6BADCE2F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F467A50F-8980-4637-A1E2-396A64C9645E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F467A50F-8980-4637-A1E2-396A64C9645E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F467A50F-8980-4637-A1E2-396A64C9645E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F467A50F-8980-4637-A1E2-396A64C9645E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B0CBCD0E-8748-4271-9915-A3507BEC8B51} = {BFB40D99-6EBC-4216-90D3-97302EC08435}
 		{3CB5444A-DDD1-43B3-A924-A73AD6161227} = {BFB40D99-6EBC-4216-90D3-97302EC08435}
 		{3BECC991-0685-463E-96EE-6BB90503FBDC} = {BFB40D99-6EBC-4216-90D3-97302EC08435}
 		{07A543B3-59DB-4647-B609-8B9CD08BC07E} = {BFB40D99-6EBC-4216-90D3-97302EC08435}
+		{24FFFD5F-094E-4753-85AC-95CE6BADCE2F} = {F90FCBBD-D0DA-4763-A8B4-936E9E829900}
+		{F467A50F-8980-4637-A1E2-396A64C9645E} = {F90FCBBD-D0DA-4763-A8B4-936E9E829900}
 	EndGlobalSection
 EndGlobal

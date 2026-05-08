@@ -1,6 +1,7 @@
 using DotNetConsistency.Api.Extensions;
 using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Services;
+using DotNetConsistency.Application.Specifications.Authors;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DotNetConsistency.Api.Controllers;
@@ -27,6 +28,19 @@ public class AuthorsController : ControllerBase
     public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query, CancellationToken ct)
     {
         var result = await _authorService.GetPagedAsync(query, ct);
+        return result.ToActionResult(this);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] string? name,
+        [FromQuery] string? orderBy,
+        [FromQuery] bool descending = false,
+        [FromQuery] PagedQuery? query = null,
+        CancellationToken ct = default)
+    {
+        var spec = new AuthorsByNameSpec(name, orderBy, descending);
+        var result = await _authorService.GetPagedAsync(spec, query ?? new PagedQuery(), ct);
         return result.ToActionResult(this);
     }
 

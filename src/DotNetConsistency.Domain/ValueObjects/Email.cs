@@ -20,5 +20,13 @@ public sealed record Email
         return new Email(value);
     }
 
+    public static Email FromDatabase(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !Regex.IsMatch(value, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            throw new DataCorruptionException(nameof(Email), value ?? "(null)");
+
+        return new Email(value);
+    }
+
     public override string ToString() => Value;
 }

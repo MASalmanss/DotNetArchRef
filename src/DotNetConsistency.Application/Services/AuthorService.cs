@@ -2,6 +2,7 @@ using DotNetConsistency.Application.Common;
 using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Application.Mappers;
+using DotNetConsistency.Application.Specifications;
 using DotNetConsistency.Domain.Entities;
 using DotNetConsistency.Domain.ValueObjects;
 
@@ -25,6 +26,13 @@ public class AuthorService : IAuthorService
     public async Task<Result<PagedResult<AuthorDto>>> GetPagedAsync(PagedQuery query, CancellationToken ct = default)
     {
         var paged = await _uow.Authors.GetPagedAsync(query.Page, query.PageSize, ct);
+        var dtos = paged.Items.Select(AuthorMapper.ToDto);
+        return Result<PagedResult<AuthorDto>>.Ok(new PagedResult<AuthorDto>(dtos, paged.TotalCount, query.Page, query.PageSize));
+    }
+
+    public async Task<Result<PagedResult<AuthorDto>>> GetPagedAsync(ISpecification<Author> spec, PagedQuery query, CancellationToken ct = default)
+    {
+        var paged = await _uow.Authors.GetPagedAsync(spec, query.Page, query.PageSize, ct);
         var dtos = paged.Items.Select(AuthorMapper.ToDto);
         return Result<PagedResult<AuthorDto>>.Ok(new PagedResult<AuthorDto>(dtos, paged.TotalCount, query.Page, query.PageSize));
     }

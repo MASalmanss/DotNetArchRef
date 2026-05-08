@@ -356,7 +356,70 @@ GET /api/books/9999
 
 # Sayfalama
 GET /api/books/paged?page=1&pageSize=10
+
+# Specification ile filtreleme + sıralama
+GET /api/books/search?minPrice=20&maxPrice=100&orderBy=price&descending=false&page=1&pageSize=10
+GET /api/authors/search?name=Robert&orderBy=name
 ```
+
+---
+
+## Test
+
+Proje iki test projesiyle gelir. Testler harici bağımlılık gerektirmez — saf C# objeleri üzerinde çalışır.
+
+```bash
+dotnet test
+```
+
+| Proje | Kapsam |
+|-------|--------|
+| `Domain.Tests` | Value Objects (ISBN, Email, Money), Entity factory'leri, DomainException, DataCorruptionException |
+| `Application.Tests` | Result\<T\>, Result, Error tipleri, PagedResult hesaplamaları |
+
+---
+
+## Yol Haritası
+
+### CQRS / MediatR
+
+Şu an `BookService` ve `AuthorService` hem okuma hem yazma operasyonlarını yönetiyor. Servisler büyüdüğünde doğal evrim noktası CQRS'tir:
+
+```
+// Mevcut yapı
+BookService.GetAllAsync()
+BookService.CreateAsync()
+
+// CQRS ile evrim
+GetAllBooksQuery      → GetAllBooksQueryHandler
+CreateBookCommand     → CreateBookCommandHandler
+```
+
+Her handler tek bir iş yapar, tek bir dosyada yaşar. `IMediator.Send()` ile controller'lar servise değil handler'a bağlanır. MediatR bu geçişi kolaylaştırır.
+
+Bu yapı CQRS'e hazırdır — `IUnitOfWork`, `Result<T>`, tek sorumluluklu handler'lar için gereken altyapı mevcuttur.
+
+### Domain Events
+
+`Book.Create()` veya `Author.Create()` çağrıldığında yan etki tetikleme ihtiyacı doğduğunda (e-posta, audit log, cache invalidation) Domain Events mekanizması kullanılacaktır:
+
+```csharp
+// Entity içinde event üretimi
+public static Book Create(...)
+{
+    var book = new Book { ... };
+    book._events.Add(new BookCreatedEvent(book.Id));
+    return book;
+}
+
+// UnitOfWork.CommitAsync içinde dispatch
+await _dispatcher.DispatchAsync(entity.DomainEvents);
+await _context.SaveChangesAsync(ct);
+```
+
+Domain Events, `BookCreatedEvent`'i dinleyen handler'ları servis bilmeden tetikler. Katman sınırları korunur.
+
+Bu yapı bu geçişe hazırdır — `UnitOfWork` merge noktası olarak zaten merkezdedir.
 
 ---
 
@@ -370,3 +433,5 @@ GET /api/books/paged?page=1&pageSize=10
 | SQLite | 8.0.8 | Veritabanı |
 | FluentValidation | 11.9.2 | Input validasyonu |
 | Swashbuckle | 6.4.0 | Swagger / OpenAPI |
+| xUnit | 2.x | Unit testler |
+| FluentAssertions | 6.12.0 | Test assertion'ları |

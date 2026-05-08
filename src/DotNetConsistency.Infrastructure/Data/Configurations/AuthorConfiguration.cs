@@ -18,7 +18,7 @@ public class AuthorConfiguration : IEntityTypeConfiguration<Author>
         builder.Property(a => a.Email)
             .HasConversion(
                 email => email.Value,
-                value => Email.Create(value))
+                value => Email.FromDatabase(value))
             .IsRequired()
             .HasMaxLength(300);
 

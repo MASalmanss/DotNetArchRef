@@ -2,6 +2,7 @@ using DotNetConsistency.Application.Common;
 using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Interfaces;
 using DotNetConsistency.Application.Mappers;
+using DotNetConsistency.Application.Specifications;
 using DotNetConsistency.Domain.Entities;
 using DotNetConsistency.Domain.ValueObjects;
 
@@ -27,6 +28,14 @@ public class BookService : IBookService
     public async Task<Result<PagedResult<BookDto>>> GetPagedAsync(PagedQuery query, CancellationToken ct = default)
     {
         var paged = await _uow.Books.GetPagedAsync(query.Page, query.PageSize, ct);
+        var authorMap = await BuildAuthorMapAsync(paged.Items.Select(b => b.AuthorId).Distinct(), ct);
+        var dtos = paged.Items.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty)));
+        return Result<PagedResult<BookDto>>.Ok(new PagedResult<BookDto>(dtos, paged.TotalCount, query.Page, query.PageSize));
+    }
+
+    public async Task<Result<PagedResult<BookDto>>> GetPagedAsync(ISpecification<Book> spec, PagedQuery query, CancellationToken ct = default)
+    {
+        var paged = await _uow.Books.GetPagedAsync(spec, query.Page, query.PageSize, ct);
         var authorMap = await BuildAuthorMapAsync(paged.Items.Select(b => b.AuthorId).Distinct(), ct);
         var dtos = paged.Items.Select(b => BookMapper.ToDto(b, authorMap.GetValueOrDefault(b.AuthorId, string.Empty)));
         return Result<PagedResult<BookDto>>.Ok(new PagedResult<BookDto>(dtos, paged.TotalCount, query.Page, query.PageSize));

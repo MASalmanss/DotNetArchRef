@@ -1,5 +1,6 @@
 using DotNetConsistency.Application.Common;
 using DotNetConsistency.Application.Interfaces;
+using DotNetConsistency.Application.Specifications;
 using DotNetConsistency.Domain.Common;
 using DotNetConsistency.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -33,6 +34,17 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         return new PagedResult<T>(items, total, page, pageSize);
     }
 
+    public async Task<PagedResult<T>> GetPagedAsync(ISpecification<T> spec, int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = ApplySpecification(_dbSet.AsNoTracking(), spec);
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return new PagedResult<T>(items, total, page, pageSize);
+    }
+
     public async Task AddAsync(T entity, CancellationToken ct = default)
         => await _dbSet.AddAsync(entity, ct);
 
@@ -41,4 +53,17 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
     public void Delete(T entity)
         => _dbSet.Remove(entity);
+
+    private static IQueryable<T> ApplySpecification(IQueryable<T> query, ISpecification<T> spec)
+    {
+        if (spec.Criteria is not null)
+            query = query.Where(spec.Criteria);
+
+        if (spec.OrderBy is not null)
+            query = spec.IsDescending
+                ? query.OrderByDescending(spec.OrderBy)
+                : query.OrderBy(spec.OrderBy);
+
+        return query;
+    }
 }

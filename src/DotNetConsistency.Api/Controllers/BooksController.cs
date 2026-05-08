@@ -1,6 +1,7 @@
 using DotNetConsistency.Api.Extensions;
 using DotNetConsistency.Application.DTOs;
 using DotNetConsistency.Application.Services;
+using DotNetConsistency.Application.Specifications.Books;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DotNetConsistency.Api.Controllers;
@@ -27,6 +28,20 @@ public class BooksController : ControllerBase
     public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query, CancellationToken ct)
     {
         var result = await _bookService.GetPagedAsync(query, ct);
+        return result.ToActionResult(this);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search(
+        [FromQuery] decimal? minPrice,
+        [FromQuery] decimal? maxPrice,
+        [FromQuery] string? orderBy,
+        [FromQuery] bool descending = false,
+        [FromQuery] PagedQuery? query = null,
+        CancellationToken ct = default)
+    {
+        var spec = new BooksByPriceRangeSpec(minPrice, maxPrice, orderBy, descending);
+        var result = await _bookService.GetPagedAsync(spec, query ?? new PagedQuery(), ct);
         return result.ToActionResult(this);
     }
 

@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
 
         services.AddValidatorsFromAssemblyContaining<CreateBookRequestValidator>();
 
+        services.AddSingleton<IExceptionHandler, DataCorruptionExceptionHandler>();
         services.AddSingleton<IExceptionHandler, DomainExceptionHandler>();
         services.AddSingleton<IExceptionHandler, NotFoundExceptionHandler>();
         services.AddSingleton<IExceptionHandler, ConflictExceptionHandler>();

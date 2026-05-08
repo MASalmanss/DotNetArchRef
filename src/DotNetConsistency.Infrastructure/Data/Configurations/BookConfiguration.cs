@@ -18,7 +18,7 @@ public class BookConfiguration : IEntityTypeConfiguration<Book>
         builder.Property(b => b.ISBN)
             .HasConversion(
                 isbn => isbn.Value,
-                value => ISBN.Create(value))
+                value => ISBN.FromDatabase(value))
             .IsRequired()
             .HasMaxLength(20);
 
@@ -28,7 +28,7 @@ public class BookConfiguration : IEntityTypeConfiguration<Book>
         builder.Property(b => b.Price)
             .HasConversion(
                 money => money.Amount,
-                amount => Money.Create(amount))
+                amount => Money.FromDatabase(amount))
             .HasPrecision(18, 2);
     }
 }

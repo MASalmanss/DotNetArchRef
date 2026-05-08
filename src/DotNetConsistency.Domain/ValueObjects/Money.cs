@@ -16,5 +16,13 @@ public sealed record Money
         return new Money(amount);
     }
 
+    public static Money FromDatabase(decimal amount)
+    {
+        if (amount <= 0)
+            throw new DataCorruptionException(nameof(Money), amount.ToString());
+
+        return new Money(amount);
+    }
+
     public override string ToString() => Amount.ToString("F2");
 }

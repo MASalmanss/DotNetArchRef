@@ -20,5 +20,13 @@ public sealed record ISBN
         return new ISBN(value);
     }
 
+    public static ISBN FromDatabase(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !Regex.IsMatch(value, @"^[0-9\-]{10,20}$"))
+            throw new DataCorruptionException(nameof(ISBN), value ?? "(null)");
+
+        return new ISBN(value);
+    }
+
     public override string ToString() => Value;
 }
