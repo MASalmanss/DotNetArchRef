@@ -349,8 +349,9 @@ dotnet test
 |---|---|---|
 | `Domain.Tests` | ISBN, Email, Money value object'leri; Book ve Author factory'leri; DomainException, DataCorruptionException | 46 |
 | `Application.Tests` | Result\<T\>, Result, Error tipleri; PagedResult hesaplamaları | 20 |
+| `Integration.Tests` | AuthorRepository ve BookRepository; EF Core pipeline; UnitOfWork.CommitAsync | 8 |
 
-Testler harici bağımlılık gerektirmez — saf domain nesneleri üzerinde çalışır.
+`Integration.Tests`, EF Core InMemory provider ile gerçek repository ve UnitOfWork davranışını test eder — mock kullanılmaz.
 
 ---
 
@@ -403,6 +404,16 @@ POST /api/books
 | Swashbuckle | 6.4.0 | Swagger / OpenAPI |
 | xUnit | 2.x | Unit testler |
 | FluentAssertions | 6.12.0 | Test assertion'ları |
+
+---
+
+## Bilinen Kısıtlamalar
+
+### In-Memory Cache — Single Node
+`IMemoryCache`, process içinde yaşar. Birden fazla uygulama instance'ı çalıştırıldığında (horizontal scaling, load balancer) her instance'ın ayrı cache'i olur ve tutarsızlık kaçınılmazdır. Bu, geliştirme ve tek-instance deployment senaryoları için bilinçli bir karardır. Production'da distributed cache (Redis) ile değiştirilmelidir — `IDistributedCache` soyutlaması bu geçişi kolaylaştırır.
+
+### GetPagedAsync Cache Pass-Through
+Sayfalı ve filtrelenmiş sorgular cache'lenmez. `minPrice=10&maxPrice=100&orderBy=price&page=1&pageSize=10` gibi parametre kombinasyonları için query hash'i cache key olarak kullanmak teknik olarak mümkündür; ancak bu tasarımda stale veri riski kabul edilemez bulundu — fiyat veya başlık güncellenince hangi sayfa cache'lerinin geçersiz olduğunu belirlemek güvenilir değildir. `GetAll` ve `GetById` için açık invalidation yapılabildiğinden bunlar cache'lenir.
 
 ---
 

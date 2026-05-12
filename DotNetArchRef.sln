@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetArchRef.Domain.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetArchRef.Application.Tests", "tests\DotNetArchRef.Application.Tests\DotNetArchRef.Application.Tests.csproj", "{F467A50F-8980-4637-A1E2-396A64C9645E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetArchRef.Integration.Tests", "tests\DotNetArchRef.Integration.Tests\DotNetArchRef.Integration.Tests.csproj", "{B9D58F3A-A6A3-4524-B14D-E96D8D48D621}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,10 @@ Global
 		{F467A50F-8980-4637-A1E2-396A64C9645E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F467A50F-8980-4637-A1E2-396A64C9645E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F467A50F-8980-4637-A1E2-396A64C9645E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9D58F3A-A6A3-4524-B14D-E96D8D48D621}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9D58F3A-A6A3-4524-B14D-E96D8D48D621}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9D58F3A-A6A3-4524-B14D-E96D8D48D621}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9D58F3A-A6A3-4524-B14D-E96D8D48D621}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B0CBCD0E-8748-4271-9915-A3507BEC8B51} = {BFB40D99-6EBC-4216-90D3-97302EC08435}
@@ -60,5 +66,6 @@ Global
 		{07A543B3-59DB-4647-B609-8B9CD08BC07E} = {BFB40D99-6EBC-4216-90D3-97302EC08435}
 		{24FFFD5F-094E-4753-85AC-95CE6BADCE2F} = {F90FCBBD-D0DA-4763-A8B4-936E9E829900}
 		{F467A50F-8980-4637-A1E2-396A64C9645E} = {F90FCBBD-D0DA-4763-A8B4-936E9E829900}
+		{B9D58F3A-A6A3-4524-B14D-E96D8D48D621} = {F90FCBBD-D0DA-4763-A8B4-936E9E829900}
 	EndGlobalSection
 EndGlobal
