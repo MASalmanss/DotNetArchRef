@@ -1,27 +1,25 @@
 # DotNetArchRef
 
-> Bir .NET 8 Web API referans projesi. Domain-Driven Design, Clean Architecture ve enterprise kalıpların tek bir kod tabanında nasıl birlikte çalıştığını göstermek amacıyla yazılmıştır.
+> .NET 8 Web API referans projesi. Domain-Driven Design, Clean Architecture ve enterprise pattern'ların production kalitesinde nasıl bir arada çalıştığını göstermek için tasarlanmıştır.
 
 ---
 
 ## Mimari Genel Bakış
 
-Proje, **Clean Architecture** prensiplerine göre dört katmana ayrılmıştır. Bağımlılık oku yalnızca içe doğru akar — hiçbir iç katman dış katmanı referans almaz.
+Proje **Clean Architecture** prensiplerine göre dört katmana ayrılmıştır. Bağımlılık oku yalnızca içe doğru akar — hiçbir iç katman dış katmanı referans almaz.
 
 ```
-DotNetArchRef.Domain          ← Çekirdek; sıfır bağımlılık
-DotNetArchRef.Application     ← Use case'ler; yalnızca Domain'e bağımlı
-DotNetArchRef.Infrastructure  ← EF Core, repo implementasyonları; Application'a bağımlı
+DotNetArchRef.Domain          ← Çekirdek; sıfır dış bağımlılık
+DotNetArchRef.Application     ← Use case koordinasyonu; yalnızca Domain'e bağımlı
+DotNetArchRef.Infrastructure  ← EF Core, cache, logging, event dispatch; Application'a bağımlı
 DotNetArchRef.Api             ← Controller'lar, filtreler, validatörler; tüm katmanlara bağımlı
 ```
 
 ---
 
-## Katman Detayları
+## Uygulanan Pattern'lar
 
-### Domain
-
-Domain katmanı framework veya kütüphane bağımlılığı içermez. İş kuralları buradadır ve buradan çıkmaz.
+### 1. Domain-Driven Design (DDD)
 
 #### Value Objects
 
@@ -35,14 +33,14 @@ public sealed record ISBN
 
     public static ISBN Create(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException("ISBN boş olamaz.");
-
         if (!Regex.IsMatch(value, @"^[0-9\-]{10,20}$"))
-            throw new DomainException("ISBN yalnızca rakam ve tire içermeli, 10-20 karakter uzunluğunda olmalıdır.");
-
+            throw new DomainException("ISBN yalnızca rakam ve tire içermeli, 10-20 karakter olmalıdır.");
         return new ISBN(value);
     }
+
+    // EF Core Value Converter için — DB'den gelen veri DomainException değil
+    // DataCorruptionException fırlatır; ikisi farklı HTTP koduna düşer
+    public static ISBN FromDatabase(string value) { ... }
 }
 ```
 
@@ -50,7 +48,7 @@ Aynı yapı `Email` ve `Money` için de geçerlidir. `Money.Amount` hiçbir zama
 
 #### Rich Domain Model
 
-Entity'ler `private set` kullanır. Dışarıdan setter çağrısı derleme hatasıdır. Durum değişikliği yalnızca factory method ve domain metotları aracılığıyla olur:
+Entity'ler `private set` kullanır. Durum değişikliği yalnızca factory method ve domain metotları aracılığıyla olur:
 
 ```csharp
 public class Book : BaseEntity
@@ -66,29 +64,63 @@ public class Book : BaseEntity
 }
 ```
 
-`Author` entity'si, kitap koleksiyonunu backing field ile encapsulate eder:
+#### Aggregate Root
+
+`Author`, kendi `Book` koleksiyonunu yöneten Aggregate Root'tur. Kitap oluşturma işlemi doğrudan `BookRepository`'ye gitmez; `Author` üzerinden geçer. Bu sayede domain kuralları merkezi bir noktada korunur:
 
 ```csharp
-private readonly List<Book> _books = [];
-public IReadOnlyCollection<Book> Books => _books.AsReadOnly();
+public class Author : BaseEntity
+{
+    private readonly List<Book> _books = [];
+    public IReadOnlyCollection<Book> Books => _books.AsReadOnly();
+
+    public Book AddBook(string title, ISBN isbn, Money price)
+    {
+        if (_books.Count >= 20)
+            throw new DomainException("Bir yazar en fazla 20 kitaba sahip olabilir.");
+
+        var book = Book.Create(title, isbn, price, Id);
+        _books.Add(book);
+
+        AddDomainEvent(new BookAddedEvent(this, book));  // yan etki tetiklenir
+        return book;
+    }
+}
 ```
 
-#### DomainException
+Servis kodu `author.AddBook(...)` çağırır — kapasite kontrolünü bilmek zorunda değildir.
 
-Domain invariant ihlalleri için özel exception sınıfı. Middleware seviyesinde `422 Unprocessable Entity` olarak yakalanır — business error ile infrastructure error arasında net bir ayrım sağlar.
+#### Domain Events
+
+Entity'ler, gerçekleştirdikleri önemli olayları `BaseEntity` üzerindeki bir liste aracılığıyla kayıt altına alır. `DbContext.SaveChangesAsync` override edilerek kayıt sonrası bu event'ler toplanır ve dispatch edilir.
+
+```csharp
+public abstract class BaseEntity
+{
+    private readonly List<IDomainEvent> _domainEvents = [];
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+    protected void AddDomainEvent(IDomainEvent e) => _domainEvents.Add(e);
+    public void ClearDomainEvents() => _domainEvents.Clear();
+}
+```
+
+Tanımlı event'ler:
+
+| Event | Tetikleyen | Handler |
+|---|---|---|
+| `AuthorCreatedEvent` | `Author.Create()` | `AuthorCreatedEventHandler` → log |
+| `BookAddedEvent` | `Author.AddBook()` | `BookAddedEventHandler` → log |
+
+`DomainEventDispatcher`, DI container'ı message bus olarak kullanır. `Author`, `BookAddedEvent` fırlattıktan sonra kimin dinlediğini bilmez — yeni bir handler eklemek için hiçbir entity veya servis değiştirilmez.
 
 ---
 
-### Application
+### 2. Result Pattern
 
-Use case koordinasyonundan sorumludur. EF Core, HTTP veya herhangi bir framework bilgisi yoktur.
-
-#### Result Pattern
-
-Servisler exception fırlatmak yerine `Result<T>` döner. Kontrol akışı artık exception ile değil, tip sistemiyle sağlanır.
+Servisler exception fırlatmak yerine `Result<T>` döner. Kontrol akışı tip sistemiyle sağlanır; try-catch bloğu yoktur.
 
 ```csharp
-// Implicit conversion — servis kodu temiz kalır
 public async Task<Result<BookDto>> GetByIdAsync(int id, CancellationToken ct)
 {
     var book = await _uow.Books.GetByIdAsync(id, ct);
@@ -99,37 +131,65 @@ public async Task<Result<BookDto>> GetByIdAsync(int id, CancellationToken ct)
 }
 ```
 
-`Error` tipi dört kategori tanır — her biri doğrudan bir HTTP durum koduna karşılık gelir:
+`Error` tipi dört kategori tanır:
 
 | ErrorType | HTTP Status |
-|-----------|------------|
+|---|---|
 | `NotFound` | 404 |
 | `Conflict` | 409 |
 | `Validation` | 422 |
 | `Unexpected` | 500 |
 
-#### Unit of Work
+---
 
-`SaveChangesAsync`, repository implementasyonlarından kaldırılmıştır. Her use case, tek bir `CommitAsync` çağrısıyla transaction'ı sonlandırır. Repository'ler `IUnitOfWork` üzerinden erişilir:
+### 3. Decorator Pattern — Cache ve Logging
 
-```csharp
-public class BookService : IBookService
-{
-    private readonly IUnitOfWork _uow;
+Cross-cutting concern'ler (cache, logging) servis implementasyonuna dokunulmadan eklenir. Her concern kendi decorator sınıfında yaşar; zincir DI container'da kurulur.
 
-    public async Task<Result<BookDto>> CreateAsync(CreateBookRequest request, CancellationToken ct)
-    {
-        // ...iş kuralları kontrolleri...
-        await _uow.Books.AddAsync(book, ct);
-        await _uow.CommitAsync(ct);  // tek nokta
-        return BookMapper.ToDto(book, author.Name);
-    }
-}
+```
+Controller
+    ↓
+BookServiceLoggingDecorator   ← her metod başında/sonunda Serilog ile log
+    ↓
+BookServiceCacheDecorator     ← IMemoryCache; GET → cache; POST/PUT/DELETE → invalidate
+    ↓
+BookService                   ← asıl iş mantığı; cache veya log bilgisi yok
+    ↓
+Repository → Database
 ```
 
-#### Repository Soyutlaması
+DI kaydı zinciri açıkça kurar:
 
-Generic `IReadRepository<T>` ve `IWriteRepository<T>` interface'leri, domain-spesifik `IBookRepository` ve `IAuthorRepository` ile genişletilir. Application katmanı yalnızca soyutlamalara bağımlıdır; EF Core sızıntısı yoktur.
+```csharp
+services.AddScoped<IBookService>(sp =>
+{
+    IBookService cached = new BookServiceCacheDecorator(
+        sp.GetRequiredService<BookService>(),
+        sp.GetRequiredService<IMemoryCache>());
+
+    return new BookServiceLoggingDecorator(cached,
+        sp.GetRequiredService<ILogger<BookServiceLoggingDecorator>>());
+});
+```
+
+Cache stratejisi: `GetAll` ve `GetById` sonuçları 5 dakika cache'lenir. `Create`, `Update`, `Delete` başarılı olursa ilgili entry'ler invalidate edilir. `GetPagedAsync` pass-through — kombinasyon sayısı fazla, stale veri riski yüksek.
+
+---
+
+### 4. Unit of Work
+
+`SaveChangesAsync`, repository implementasyonlarından kaldırılmıştır. Her use case tek bir `CommitAsync` çağrısıyla transaction'ı sonlandırır:
+
+```csharp
+await _uow.Books.AddAsync(book, ct);
+await _uow.CommitAsync(ct);  // tek nokta — DbContext.SaveChangesAsync + Domain Event dispatch
+```
+
+---
+
+### 5. Repository Pattern
+
+Generic `IReadRepository<T>` ve `IWriteRepository<T>` interface'leri, domain-spesifik interface'lerle genişletilir. Application katmanı yalnızca soyutlamalara bağımlıdır:
 
 ```
 IReadRepository<T>   ← GetAllAsync, GetByIdAsync, GetPagedAsync
@@ -139,141 +199,64 @@ IBookRepository      ← GetByIsbnAsync ekler
 IAuthorRepository    ← GetByEmailAsync ekler
 ```
 
-#### Sayfalama
-
-`IQueryable<T>` Application katmanına sızdırılmaz. Bunun yerine `GetPagedAsync(page, pageSize)` Infrastructure içinde `Skip/Take` uygular ve `PagedResult<T>` döner:
-
-```csharp
-public record PagedResult<T>(
-    IEnumerable<T> Items,
-    int TotalCount,
-    int Page,
-    int PageSize)
-{
-    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
-    public bool HasNextPage => Page < TotalPages;
-    public bool HasPreviousPage => Page > 1;
-}
-```
-
 ---
 
-### Infrastructure
+### 6. Specification Pattern
 
-#### EF Core Value Converter
-
-Value Object'ler EF Core tarafından şeffaf biçimde persist edilir. Domain tipi ile veritabanı kolonu arasındaki dönüşüm konfigürasyonda tanımlanır; servis kodu `.Value` çağırmaz:
+Filtreleme ve sıralama mantığı servis katmanından ayrılır. `ISpecification<T>`, strongly-typed `ApplyOrdering` metodu ile boxing sorununu ortadan kaldırır — `Expression<Func<T, object>>` kullanılmaz, EF Core her expression'ı SQL'e çevirebilir:
 
 ```csharp
-builder.Property(b => b.ISBN)
-    .HasConversion(
-        isbn => isbn.Value,
-        value => ISBN.Create(value))
-    .IsRequired()
-    .HasMaxLength(20);
-
-builder.Property(b => b.Price)
-    .HasConversion(
-        money => money.Amount,
-        amount => Money.Create(amount))
-    .HasPrecision(18, 2);
-```
-
-#### Unit of Work Implementasyonu
-
-`UnitOfWork` sınıfı `AppDbContext`'i wrap eder. `CommitAsync` çağrısı doğrudan `context.SaveChangesAsync`'e delege edilir:
-
-```csharp
-public sealed class UnitOfWork : IUnitOfWork
-{
-    public IBookRepository Books { get; }
-    public IAuthorRepository Authors { get; }
-
-    public Task<int> CommitAsync(CancellationToken ct = default)
-        => _context.SaveChangesAsync(ct);
-}
-```
-
----
-
-### Api
-
-#### Program.cs — 12 Satır
-
-Tüm kayıt mantığı extension method'lara taşınmıştır. `Program.cs` ne yaptığını açıkça ifade eder, nasıl yaptığını değil:
-
-```csharp
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddPresentation();
-
-app.UseGlobalExceptionHandler();
-app.UseSwaggerInDevelopment();
-app.MapControllers();
-```
-
-#### Global ValidationFilter
-
-Controller metodlarına `[FromBody]` argümanı ulaşmadan önce `IValidator<T>` otomatik olarak çözülür ve çalıştırılır. Her controller'da tekrar eden validasyon kodu yoktur:
-
-```csharp
-public class ValidationFilter : IAsyncActionFilter
-{
-    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+public override IQueryable<Book> ApplyOrdering(IQueryable<Book> query)
+    => (_orderBy, _descending) switch
     {
-        foreach (var argument in context.ActionArguments.Values)
-        {
-            var validatorType = typeof(IValidator<>).MakeGenericType(argument!.GetType());
-            if (_serviceProvider.GetService(validatorType) is not IValidator validator) continue;
-
-            var result = await validator.ValidateAsync(new ValidationContext<object>(argument), ...);
-            if (!result.IsValid)
-            {
-                context.Result = new UnprocessableEntityObjectResult(...);
-                return;
-            }
-        }
-        await next();
-    }
-}
+        ("price", false) => query.OrderBy(b => b.Price.Amount),
+        ("price", true)  => query.OrderByDescending(b => b.Price.Amount),
+        ("title", false) => query.OrderBy(b => b.Title),
+        _                => query
+    };
 ```
 
-Yeni bir DTO ve validator tanımlandığında filtre onu otomatik olarak yakalar — hiçbir controller değişikliği gerekmez.
+---
 
-#### FluentValidation
+### 7. Structured Logging — Serilog
 
-Tüm validatörler `Api` katmanındadır. `Application` katmanında FluentValidation bağımlılığı yoktur. Validasyon mesajları `WithMessage` ile açıkça tanımlanmıştır:
+`Serilog.AspNetCore` entegrasyonu ile her servis çağrısı structured log üretir. `BookServiceLoggingDecorator`, hem başarı hem hata senaryolarını farklı severity'de kaydeder:
+
+```
+[INF] GetAllBooks completed: 15 books returned
+[WRN] GetBookById failed: 42 - NotFound: Book with id 42 not found.
+[INF] Domain Event: AuthorCreated — Id=3, Name=Orhan Pamuk, Email=o@pamuk.com
+```
+
+Loglar konsola ve `logs/app-TARIH.log` dosyasına yazılır (günlük rolling).
+
+---
+
+### 8. FluentValidation + Global ValidationFilter
+
+Tüm validatörler `Api` katmanındadır — `Application` katmanında FluentValidation bağımlılığı yoktur. `ValidationFilter`, controller metoduna ulaşmadan önce `IValidator<T>`'yi otomatik çözümler:
 
 ```csharp
 RuleFor(x => x.ISBN)
     .NotEmpty().WithMessage("ISBN boş bırakılamaz.")
-    .MaximumLength(20).WithMessage("ISBN en fazla {MaxLength} karakter olabilir.")
-    .Matches(@"^[0-9\-]{10,20}$").WithMessage("ISBN yalnızca rakam ve tire içermeli, 10-20 karakter uzunluğunda olmalıdır.");
+    .Matches(@"^[0-9\-]{10,20}$").WithMessage("ISBN yalnızca rakam ve tire içermeli.");
 ```
 
-#### Chain-of-Responsibility Exception Handler
+---
 
-`IExceptionHandler` zinciri, infrastructure hataları için son savunma hattıdır. Business logic exception fırlatmaz; ancak veritabanı bağlantısı gibi beklenmedik hatalar middleware tarafından yakalanır:
+### 9. Chain-of-Responsibility Exception Handler
+
+Business logic exception fırlatmaz. Ancak infrastructure hataları (DB bağlantısı, data corruption) middleware zinciri tarafından yakalanır:
 
 ```
-DomainExceptionHandler     → DomainException      → 422
-NotFoundExceptionHandler   → KeyNotFoundException  → 404
-ConflictExceptionHandler   → DbUpdateException     → 409
-DefaultExceptionHandler    → her şey              → 500
+DomainExceptionHandler          → DomainException           → 422
+DataCorruptionExceptionHandler  → DataCorruptionException    → 500
+NotFoundExceptionHandler        → KeyNotFoundException       → 404
+ConflictExceptionHandler        → DbUpdateException          → 409
+DefaultExceptionHandler         → her şey                   → 500
 ```
 
-#### ResultExtensions
-
-Controller'lar `Result<T>` üzerinden doğrudan HTTP yanıtına dönüşüm yapar. HTTP bilgisi servise sızmaz:
-
-```csharp
-[HttpPost]
-public async Task<IActionResult> Create(CreateBookRequest request, CancellationToken ct)
-{
-    var result = await _bookService.CreateAsync(request, ct);
-    return result.ToCreatedResult(this, nameof(GetById), book => new { id = book.Id });
-}
-```
+`DataCorruptionException` ayrımı kritiktir: DB'den gelen bozuk veri 422 döndürmez — bu bir client hatası değil, infrastructure hatasıdır.
 
 ---
 
@@ -282,20 +265,29 @@ public async Task<IActionResult> Create(CreateBookRequest request, CancellationT
 ```
 src/
 ├── DotNetArchRef.Domain/
-│   ├── Common/BaseEntity.cs
+│   ├── Common/
+│   │   ├── BaseEntity.cs           ← Id, audit fields, domain event listesi
+│   │   ├── IDomainEvent.cs
+│   │   ├── IDomainEventHandler.cs
+│   │   └── IDomainEventDispatcher.cs
 │   ├── Entities/
-│   │   ├── Book.cs
-│   │   └── Author.cs
+│   │   ├── Author.cs               ← Aggregate Root; AddBook(), domain event
+│   │   └── Book.cs                 ← Rich model; private setters
+│   ├── Events/
+│   │   ├── AuthorCreatedEvent.cs
+│   │   └── BookAddedEvent.cs
 │   ├── ValueObjects/
-│   │   ├── ISBN.cs
+│   │   ├── ISBN.cs                 ← Create() + FromDatabase()
 │   │   ├── Email.cs
 │   │   └── Money.cs
-│   └── Exceptions/DomainException.cs
+│   └── Exceptions/
+│       ├── DomainException.cs
+│       └── DataCorruptionException.cs
 │
 ├── DotNetArchRef.Application/
 │   ├── Common/
-│   │   ├── Result.cs
-│   │   ├── Error.cs
+│   │   ├── Result.cs               ← Result<T> + implicit conversions
+│   │   ├── Error.cs                ← factory methods: NotFound, Conflict...
 │   │   ├── ErrorType.cs
 │   │   └── PagedResult.cs
 │   ├── DTOs/
@@ -306,13 +298,31 @@ src/
 │   │   ├── IAuthorRepository.cs
 │   │   └── IUnitOfWork.cs
 │   ├── Mappers/
-│   └── Services/
+│   ├── Services/
+│   │   ├── BookService.cs
+│   │   └── AuthorService.cs
+│   └── Specifications/
+│       ├── ISpecification.cs
+│       ├── BaseSpecification.cs
+│       └── Books/BooksByPriceRangeSpec.cs
 │
 ├── DotNetArchRef.Infrastructure/
+│   ├── Cache/
+│   │   ├── CacheKeys.cs
+│   │   ├── BookServiceCacheDecorator.cs
+│   │   └── AuthorServiceCacheDecorator.cs
 │   ├── Data/
-│   │   ├── AppDbContext.cs
+│   │   ├── AppDbContext.cs          ← SaveChangesAsync override + event dispatch
 │   │   └── Configurations/
-│   ├── Persistence/UnitOfWork.cs
+│   ├── EventHandlers/
+│   │   ├── AuthorCreatedEventHandler.cs
+│   │   └── BookAddedEventHandler.cs
+│   ├── Logging/
+│   │   ├── BookServiceLoggingDecorator.cs
+│   │   └── AuthorServiceLoggingDecorator.cs
+│   ├── Persistence/
+│   │   ├── UnitOfWork.cs
+│   │   └── DomainEventDispatcher.cs ← DI container'ı in-process message bus olarak kullanır
 │   └── Repositories/
 │
 └── DotNetArchRef.Api/
@@ -326,6 +336,21 @@ src/
     ├── Validators/
     └── Program.cs
 ```
+
+---
+
+## Test
+
+```bash
+dotnet test
+```
+
+| Proje | Kapsam | Test Sayısı |
+|---|---|---|
+| `Domain.Tests` | ISBN, Email, Money value object'leri; Book ve Author factory'leri; DomainException, DataCorruptionException | 46 |
+| `Application.Tests` | Result\<T\>, Result, Error tipleri; PagedResult hesaplamaları | 20 |
+
+Testler harici bağımlılık gerektirmez — saf domain nesneleri üzerinde çalışır.
 
 ---
 
@@ -345,11 +370,9 @@ Swagger UI: `http://localhost:<port>/swagger`
 POST /api/authors
 { "name": "", "email": "geçersiz" }
 
-# Conflict → 409
-POST /api/authors
-{ "name": "A", "email": "a@b.com" }
-POST /api/authors
-{ "name": "B", "email": "a@b.com" }  # aynı e-posta
+# Conflict → 409 (aynı e-posta)
+POST /api/authors { "name": "A", "email": "a@b.com" }
+POST /api/authors { "name": "B", "email": "a@b.com" }
 
 # Bulunamadı → 404
 GET /api/books/9999
@@ -359,79 +382,34 @@ GET /api/books/paged?page=1&pageSize=10
 
 # Specification ile filtreleme + sıralama
 GET /api/books/search?minPrice=20&maxPrice=100&orderBy=price&descending=false&page=1&pageSize=10
-GET /api/authors/search?name=Robert&orderBy=name
+
+# Kitap oluştur — Author Aggregate Root üzerinden, BookAddedEvent fırlatılır
+POST /api/books
+{ "title": "Dune", "isbn": "978-0-441-17271-9", "price": 89.90, "authorId": 1 }
 ```
-
----
-
-## Test
-
-Proje iki test projesiyle gelir. Testler harici bağımlılık gerektirmez — saf C# objeleri üzerinde çalışır.
-
-```bash
-dotnet test
-```
-
-| Proje | Kapsam |
-|-------|--------|
-| `Domain.Tests` | Value Objects (ISBN, Email, Money), Entity factory'leri, DomainException, DataCorruptionException |
-| `Application.Tests` | Result\<T\>, Result, Error tipleri, PagedResult hesaplamaları |
-
----
-
-## Yol Haritası
-
-### CQRS / MediatR
-
-Şu an `BookService` ve `AuthorService` hem okuma hem yazma operasyonlarını yönetiyor. Servisler büyüdüğünde doğal evrim noktası CQRS'tir:
-
-```
-// Mevcut yapı
-BookService.GetAllAsync()
-BookService.CreateAsync()
-
-// CQRS ile evrim
-GetAllBooksQuery      → GetAllBooksQueryHandler
-CreateBookCommand     → CreateBookCommandHandler
-```
-
-Her handler tek bir iş yapar, tek bir dosyada yaşar. `IMediator.Send()` ile controller'lar servise değil handler'a bağlanır. MediatR bu geçişi kolaylaştırır.
-
-Bu yapı CQRS'e hazırdır — `IUnitOfWork`, `Result<T>`, tek sorumluluklu handler'lar için gereken altyapı mevcuttur.
-
-### Domain Events
-
-`Book.Create()` veya `Author.Create()` çağrıldığında yan etki tetikleme ihtiyacı doğduğunda (e-posta, audit log, cache invalidation) Domain Events mekanizması kullanılacaktır:
-
-```csharp
-// Entity içinde event üretimi
-public static Book Create(...)
-{
-    var book = new Book { ... };
-    book._events.Add(new BookCreatedEvent(book.Id));
-    return book;
-}
-
-// UnitOfWork.CommitAsync içinde dispatch
-await _dispatcher.DispatchAsync(entity.DomainEvents);
-await _context.SaveChangesAsync(ct);
-```
-
-Domain Events, `BookCreatedEvent`'i dinleyen handler'ları servis bilmeden tetikler. Katman sınırları korunur.
-
-Bu yapı bu geçişe hazırdır — `UnitOfWork` merge noktası olarak zaten merkezdedir.
 
 ---
 
 ## Teknoloji Yığını
 
 | Teknoloji | Versiyon | Kullanım |
-|-----------|----------|----------|
+|---|---|---|
 | .NET | 8.0 | Hedef framework |
 | ASP.NET Core | 8.0 | Web API |
-| Entity Framework Core | 8.0.8 | ORM + Migrations |
+| Entity Framework Core | 8.0.8 | ORM + Migrations + Value Converters |
 | SQLite | 8.0.8 | Veritabanı |
 | FluentValidation | 11.9.2 | Input validasyonu |
+| Serilog | 8.0.2 | Structured logging (Console + File) |
 | Swashbuckle | 6.4.0 | Swagger / OpenAPI |
 | xUnit | 2.x | Unit testler |
 | FluentAssertions | 6.12.0 | Test assertion'ları |
+
+---
+
+## Yol Haritası
+
+### CQRS + MediatR
+`BookService` şu an hem okuma hem yazma operasyonlarını yönetiyor. Doğal evrim noktası CQRS'tir — her handler tek bir iş yapar, MediatR Pipeline Behavior'ları `LoggingDecorator` ve `CacheDecorator`'ın yerini alır.
+
+### Event Sourcing
+Mevcut entity state yerine event dizisi persist edilir. Audit log, zaman yolculuğu ve replay senaryoları için uygundur. Domain Events altyapısı bu geçişin temelini oluşturmaktadır.
