@@ -1,4 +1,6 @@
 using DotNetArchRef.Application.Interfaces;
+using DotNetArchRef.Application.Services;
+using DotNetArchRef.Infrastructure.Cache;
 using DotNetArchRef.Infrastructure.Data;
 using DotNetArchRef.Infrastructure.Persistence;
 using DotNetArchRef.Infrastructure.Repositories;
@@ -20,6 +22,18 @@ public static class DependencyInjection
         services.AddScoped<IAuthorRepository, AuthorRepository>();
         services.AddScoped<IBookRepository, BookRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        services.AddMemoryCache();
+
+        services.AddScoped<BookService>();
+        services.AddScoped<IBookService>(sp => new BookServiceCacheDecorator(
+            sp.GetRequiredService<BookService>(),
+            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
+
+        services.AddScoped<AuthorService>();
+        services.AddScoped<IAuthorService>(sp => new AuthorServiceCacheDecorator(
+            sp.GetRequiredService<AuthorService>(),
+            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
 
         return services;
     }
