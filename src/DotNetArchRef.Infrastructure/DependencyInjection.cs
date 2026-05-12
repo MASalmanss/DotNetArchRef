@@ -2,11 +2,14 @@ using DotNetArchRef.Application.Interfaces;
 using DotNetArchRef.Application.Services;
 using DotNetArchRef.Infrastructure.Cache;
 using DotNetArchRef.Infrastructure.Data;
+using DotNetArchRef.Infrastructure.Logging;
 using DotNetArchRef.Infrastructure.Persistence;
 using DotNetArchRef.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DotNetArchRef.Infrastructure;
 
@@ -26,14 +29,24 @@ public static class DependencyInjection
         services.AddMemoryCache();
 
         services.AddScoped<BookService>();
-        services.AddScoped<IBookService>(sp => new BookServiceCacheDecorator(
-            sp.GetRequiredService<BookService>(),
-            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
+        services.AddScoped<IBookService>(sp =>
+        {
+            var cache = sp.GetRequiredService<IMemoryCache>();
+            var logger = sp.GetRequiredService<ILogger<BookServiceLoggingDecorator>>();
+
+            IBookService cached = new BookServiceCacheDecorator(sp.GetRequiredService<BookService>(), cache);
+            return new BookServiceLoggingDecorator(cached, logger);
+        });
 
         services.AddScoped<AuthorService>();
-        services.AddScoped<IAuthorService>(sp => new AuthorServiceCacheDecorator(
-            sp.GetRequiredService<AuthorService>(),
-            sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>()));
+        services.AddScoped<IAuthorService>(sp =>
+        {
+            var cache = sp.GetRequiredService<IMemoryCache>();
+            var logger = sp.GetRequiredService<ILogger<AuthorServiceLoggingDecorator>>();
+
+            IAuthorService cached = new AuthorServiceCacheDecorator(sp.GetRequiredService<AuthorService>(), cache);
+            return new AuthorServiceLoggingDecorator(cached, logger);
+        });
 
         return services;
     }
