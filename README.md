@@ -1,4 +1,4 @@
-# DotNetConsistency
+# DotNetArchRef
 
 > Bir .NET 8 Web API referans projesi. Domain-Driven Design, Clean Architecture ve enterprise kalıpların tek bir kod tabanında nasıl birlikte çalıştığını göstermek amacıyla yazılmıştır.
 
@@ -9,10 +9,10 @@
 Proje, **Clean Architecture** prensiplerine göre dört katmana ayrılmıştır. Bağımlılık oku yalnızca içe doğru akar — hiçbir iç katman dış katmanı referans almaz.
 
 ```
-DotNetConsistency.Domain          ← Çekirdek; sıfır bağımlılık
-DotNetConsistency.Application     ← Use case'ler; yalnızca Domain'e bağımlı
-DotNetConsistency.Infrastructure  ← EF Core, repo implementasyonları; Application'a bağımlı
-DotNetConsistency.Api             ← Controller'lar, filtreler, validatörler; tüm katmanlara bağımlı
+DotNetArchRef.Domain          ← Çekirdek; sıfır bağımlılık
+DotNetArchRef.Application     ← Use case'ler; yalnızca Domain'e bağımlı
+DotNetArchRef.Infrastructure  ← EF Core, repo implementasyonları; Application'a bağımlı
+DotNetArchRef.Api             ← Controller'lar, filtreler, validatörler; tüm katmanlara bağımlı
 ```
 
 ---
@@ -281,7 +281,7 @@ public async Task<IActionResult> Create(CreateBookRequest request, CancellationT
 
 ```
 src/
-├── DotNetConsistency.Domain/
+├── DotNetArchRef.Domain/
 │   ├── Common/BaseEntity.cs
 │   ├── Entities/
 │   │   ├── Book.cs
@@ -292,7 +292,7 @@ src/
 │   │   └── Money.cs
 │   └── Exceptions/DomainException.cs
 │
-├── DotNetConsistency.Application/
+├── DotNetArchRef.Application/
 │   ├── Common/
 │   │   ├── Result.cs
 │   │   ├── Error.cs
@@ -308,14 +308,14 @@ src/
 │   ├── Mappers/
 │   └── Services/
 │
-├── DotNetConsistency.Infrastructure/
+├── DotNetArchRef.Infrastructure/
 │   ├── Data/
 │   │   ├── AppDbContext.cs
 │   │   └── Configurations/
 │   ├── Persistence/UnitOfWork.cs
 │   └── Repositories/
 │
-└── DotNetConsistency.Api/
+└── DotNetArchRef.Api/
     ├── Controllers/
     ├── ExceptionHandlers/
     ├── Extensions/
@@ -333,7 +333,7 @@ src/
 
 ```bash
 dotnet restore
-dotnet run --project src/DotNetConsistency.Api
+dotnet run --project src/DotNetArchRef.Api
 ```
 
 Swagger UI: `http://localhost:<port>/swagger`
