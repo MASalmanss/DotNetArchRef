@@ -27,6 +27,7 @@ public static class DependencyInjection
 
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddScoped<IDomainEventHandler<AuthorCreatedEvent>, AuthorCreatedEventHandler>();
+        services.AddScoped<IDomainEventHandler<BookAddedEvent>, BookAddedEventHandler>();
 
         services.AddScoped<IAuthorRepository, AuthorRepository>();
         services.AddScoped<IBookRepository, BookRepository>();
