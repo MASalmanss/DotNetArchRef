@@ -33,4 +33,17 @@ public class Author : BaseEntity
 
         return author;
     }
+
+    public Book AddBook(string title, ISBN isbn, Money price)
+    {
+        if (_books.Count >= 20)
+            throw new DomainException("Bir yazar en fazla 20 kitaba sahip olabilir.");
+
+        var book = Book.Create(title, isbn, price, Id);
+        _books.Add(book);
+
+        AddDomainEvent(new BookAddedEvent(this, book));
+
+        return book;
+    }
 }

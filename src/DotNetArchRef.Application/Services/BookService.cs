@@ -61,11 +61,10 @@ public class BookService : IBookService
         if (existing is not null)
             return Error.Conflict($"A book with ISBN '{request.ISBN}' already exists.");
 
-        var book = Book.Create(
+        var book = author.AddBook(
             request.Title,
             ISBN.Create(request.ISBN),
-            Money.Create(request.Price),
-            request.AuthorId);
+            Money.Create(request.Price));
 
         await _uow.Books.AddAsync(book, ct);
         await _uow.CommitAsync(ct);
