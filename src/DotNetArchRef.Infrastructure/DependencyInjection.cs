@@ -1,7 +1,10 @@
 using DotNetArchRef.Application.Interfaces;
 using DotNetArchRef.Application.Services;
+using DotNetArchRef.Domain.Common;
+using DotNetArchRef.Domain.Events;
 using DotNetArchRef.Infrastructure.Cache;
 using DotNetArchRef.Infrastructure.Data;
+using DotNetArchRef.Infrastructure.EventHandlers;
 using DotNetArchRef.Infrastructure.Logging;
 using DotNetArchRef.Infrastructure.Persistence;
 using DotNetArchRef.Infrastructure.Repositories;
@@ -21,6 +24,9 @@ public static class DependencyInjection
     {
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.AddScoped<IDomainEventHandler<AuthorCreatedEvent>, AuthorCreatedEventHandler>();
 
         services.AddScoped<IAuthorRepository, AuthorRepository>();
         services.AddScoped<IBookRepository, BookRepository>();

@@ -6,7 +6,13 @@ namespace DotNetArchRef.Infrastructure.Data;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    private readonly IDomainEventDispatcher? _dispatcher;
+
+    public AppDbContext(DbContextOptions<AppDbContext> options, IDomainEventDispatcher? dispatcher = null)
+        : base(options)
+    {
+        _dispatcher = dispatcher;
+    }
 
     public DbSet<Author> Authors => Set<Author>();
     public DbSet<Book> Books => Set<Book>();
@@ -23,10 +29,30 @@ public class AppDbContext : DbContext
         return base.SaveChanges();
     }
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         UpdateAuditFields();
-        return base.SaveChangesAsync(cancellationToken);
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        await DispatchDomainEventsAsync(cancellationToken);
+
+        return result;
+    }
+
+    private async Task DispatchDomainEventsAsync(CancellationToken ct)
+    {
+        if (_dispatcher is null) return;
+
+        var events = ChangeTracker.Entries<BaseEntity>()
+            .SelectMany(e => e.Entity.DomainEvents)
+            .ToList();
+
+        foreach (var entry in ChangeTracker.Entries<BaseEntity>())
+            entry.Entity.ClearDomainEvents();
+
+        foreach (var domainEvent in events)
+            await _dispatcher.DispatchAsync(domainEvent, ct);
     }
 
     private void UpdateAuditFields()

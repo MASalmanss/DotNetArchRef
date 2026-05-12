@@ -1,4 +1,5 @@
 using DotNetArchRef.Domain.Common;
+using DotNetArchRef.Domain.Events;
 using DotNetArchRef.Domain.Exceptions;
 using DotNetArchRef.Domain.ValueObjects;
 
@@ -22,10 +23,14 @@ public class Author : BaseEntity
         if (name.Length > 200)
             throw new DomainException("Yazar adı en fazla 200 karakter olabilir.");
 
-        return new Author
+        var author = new Author
         {
             Name = name,
             Email = email
         };
+
+        author.AddDomainEvent(new AuthorCreatedEvent(author));
+
+        return author;
     }
 }
