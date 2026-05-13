@@ -6,6 +6,7 @@ using DotNetArchRef.Infrastructure.Cache;
 using DotNetArchRef.Infrastructure.Data;
 using DotNetArchRef.Infrastructure.EventHandlers;
 using DotNetArchRef.Infrastructure.Logging;
+using DotNetArchRef.Infrastructure.Outbox;
 using DotNetArchRef.Infrastructure.Persistence;
 using DotNetArchRef.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,8 @@ public static class DependencyInjection
             options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+        services.AddScoped<OutboxProcessor>();
+        services.AddHostedService<OutboxBackgroundService>();
         services.AddScoped<IDomainEventHandler<AuthorCreatedEvent>, AuthorCreatedEventHandler>();
         services.AddScoped<IDomainEventHandler<BookAddedEvent>, BookAddedEventHandler>();
 

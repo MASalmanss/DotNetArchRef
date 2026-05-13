@@ -1,21 +1,18 @@
+using System.Text.Json;
 using DotNetArchRef.Domain.Common;
 using DotNetArchRef.Domain.Entities;
+using DotNetArchRef.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
 namespace DotNetArchRef.Infrastructure.Data;
 
 public class AppDbContext : DbContext
 {
-    private readonly IDomainEventDispatcher? _dispatcher;
-
-    public AppDbContext(DbContextOptions<AppDbContext> options, IDomainEventDispatcher? dispatcher = null)
-        : base(options)
-    {
-        _dispatcher = dispatcher;
-    }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Author> Authors => Set<Author>();
     public DbSet<Book> Books => Set<Book>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,18 +29,19 @@ public class AppDbContext : DbContext
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         UpdateAuditFields();
+        WriteOutboxMessages();  // event'leri aynı transaction'da outbox'a yaz
 
-        var result = await base.SaveChangesAsync(cancellationToken);
-
-        await DispatchDomainEventsAsync(cancellationToken);
-
-        return result;
+        return await base.SaveChangesAsync(cancellationToken);
+        // Dispatch buradan kaldırıldı — OutboxProcessor halleder
     }
 
-    private async Task DispatchDomainEventsAsync(CancellationToken ct)
+    private static readonly JsonSerializerOptions SerializerOptions = new()
     {
-        if (_dispatcher is null) return;
+        ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve
+    };
 
+    private void WriteOutboxMessages()
+    {
         var events = ChangeTracker.Entries<BaseEntity>()
             .SelectMany(e => e.Entity.DomainEvents)
             .ToList();
@@ -51,8 +49,13 @@ public class AppDbContext : DbContext
         foreach (var entry in ChangeTracker.Entries<BaseEntity>())
             entry.Entity.ClearDomainEvents();
 
-        foreach (var domainEvent in events)
-            await _dispatcher.DispatchAsync(domainEvent, ct);
+        var outboxMessages = events.Select(e => new OutboxMessage
+        {
+            EventType = e.GetType().AssemblyQualifiedName!,
+            Payload   = JsonSerializer.Serialize(e, e.GetType(), SerializerOptions)
+        });
+
+        OutboxMessages.AddRange(outboxMessages);
     }
 
     private void UpdateAuditFields()
